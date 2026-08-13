@@ -155,28 +155,103 @@ function fileToBase64(file){
 
 async function submitApplication(){
 
+  // --------------------------------------------------
+  // ÇİFT TIKLAMA KORUMASI
+  // --------------------------------------------------
+
+  if (state.submitting) {
+    return;
+  }
+
+  state.submitting = true;
+
+
+  // --------------------------------------------------
+  // İŞLEM EKRANINI AÇ
+  // --------------------------------------------------
+
+  showUploadProgress();
+
+
   try {
+
+    // --------------------------------------------------
+    // GÖNDERİLECEK BELGELER
+    // --------------------------------------------------
+
+    const documentFields =
+      state.form.fields.filter(
+        f =>
+          f.type === "document" ||
+          f.type === "photo"
+      );
+
+
+    const uploadedDocuments =
+      documentFields.filter(
+        f => state.files[f.id]
+      );
+
+
+    const totalSteps =
+      1 + uploadedDocuments.length;
+
+    let completedSteps = 0;
+
+
+    // --------------------------------------------------
+    // 0%
+    // --------------------------------------------------
+
+    updateUploadProgress(
+      2,
+      "Başvuru hazırlanıyor..."
+    );
+
 
     // --------------------------------------------------
     // 1. PERSONEL OLUŞTUR
     // --------------------------------------------------
 
-    const personnelResult = await apiPost({
-
-      action: "createPersonnel",
-
-      first_name: state.values.firstName,
-      last_name: state.values.lastName,
-      national_id: state.values.nationalId,
-      passport_no: state.values.passport || "",
-      group_id: "GRP-FORMEN",
-      phone: state.values.phone || "",
-      email: state.values.email || ""
-
-    });
+    updateUploadProgress(
+      8,
+      "Personel kaydı oluşturuluyor..."
+    );
 
 
-    if(!personnelResult.personnel_id){
+    const personnelResult =
+      await apiPost({
+
+        action:
+          "createPersonnel",
+
+        first_name:
+          state.values.firstName,
+
+        last_name:
+          state.values.lastName,
+
+        national_id:
+          state.values.nationalId,
+
+        passport_no:
+          state.values.passport || "",
+
+        group_id:
+          "GRP-FORMEN",
+
+        phone:
+          state.values.phone || "",
+
+        email:
+          state.values.email || ""
+
+      });
+
+
+    if (
+      !personnelResult.personnel_id
+    ) {
 
       throw new Error(
         "Personel oluşturuldu ancak personnel_id alınamadı."
@@ -185,68 +260,173 @@ async function submitApplication(){
     }
 
 
-    const personnelId = personnelResult.personnel_id;
+    const personnelId =
+      personnelResult.personnel_id;
 
 
-    // --------------------------------------------------
-    // 2. BELGELERİ YÜKLE
-    // --------------------------------------------------
+    completedSteps++;
 
-    const documentFields = state.form.fields.filter(
-      f => f.type === "document" || f.type === "photo"
+
+    updateUploadProgress(
+      Math.round(
+        (completedSteps /
+          totalSteps) * 100
+      ),
+      "Personel kaydı oluşturuldu."
     );
 
 
-    for(const field of documentFields){
+    // --------------------------------------------------
+    // 2. BELGELER
+    // --------------------------------------------------
 
-      const file = state.files[field.id];
+    for (
+      let i = 0;
+      i < uploadedDocuments.length;
+      i++
+    ) {
 
-      // Opsiyonel belge yoksa geç
-      if(!file){
+      const field =
+        uploadedDocuments[i];
 
-        if(!field.required){
-          continue;
-        }
+      const file =
+        state.files[field.id];
+
+
+      const progressBefore =
+        Math.round(
+          (completedSteps /
+            totalSteps) * 100
+        );
+
+
+      updateUploadProgress(
+        Math.max(
+          progressBefore,
+          10
+        ),
+        field.label +
+        " hazırlanıyor..."
+      );
+
+
+      // ------------------------------------------------
+      // DOSYAYI BASE64'E ÇEVİR
+      // ------------------------------------------------
+
+      updateUploadProgress(
+        Math.max(
+          progressBefore,
+          10
+        ),
+        field.label +
+        " okunuyor..."
+      );
+
+
+      const base64 =
+        await fileToBase64(
+          file
+        );
+
+
+      // ------------------------------------------------
+      // DOSYA YÜKLE
+      // ------------------------------------------------
+
+      updateUploadProgress(
+        Math.max(
+          progressBefore,
+          10
+        ),
+        field.label +
+        " Google Drive'a yükleniyor..."
+      );
+
+
+      const documentResult =
+        await apiPost({
+
+          action:
+            "uploadDocument",
+
+          personnel_id:
+            personnelId,
+
+          document_code:
+            field.code,
+
+          file_name:
+            file.name,
+
+          mime_type:
+            file.type,
+
+          file_base64:
+            base64
+
+        });
+
+
+      if (
+        !documentResult.success
+      ) {
 
         throw new Error(
-          field.label + " yüklenmedi."
+          field.label +
+          " yüklenirken hata oluştu."
         );
+
       }
 
 
-      const base64 = await fileToBase64(file);
+      completedSteps++;
 
 
-      const documentResult = await apiPost({
-
-        action: "uploadDocument",
-
-        personnel_id: personnelId,
-
-        document_code: field.code,
-
-        file_name: file.name,
-
-        mime_type: file.type,
-
-        file_base64: base64
-
-      });
-
-
-      if(!documentResult.success){
-
-        throw new Error(
-          field.label + " yüklenirken hata oluştu."
+      const currentProgress =
+        Math.round(
+          (completedSteps /
+            totalSteps) * 100
         );
-      }
+
+
+      updateUploadProgress(
+        currentProgress,
+        field.label +
+        " başarıyla yüklendi."
+      );
 
     }
 
 
     // --------------------------------------------------
-    // 3. BAŞARILI
+    // %100
     // --------------------------------------------------
+
+    updateUploadProgress(
+      100,
+      "Başvurunuz başarıyla tamamlandı."
+    );
+
+
+    // Küçük bir bekleme:
+    // kullanıcı %100'ü görebilsin.
+
+    await new Promise(
+      resolve =>
+        setTimeout(
+          resolve,
+          800
+        )
+    );
+
+
+    // --------------------------------------------------
+    // BAŞARI EKRANI
+    // --------------------------------------------------
+
+    hideUploadProgress();
+
 
     showSuccess(
       personnelId,
@@ -254,14 +434,27 @@ async function submitApplication(){
     );
 
 
-  } catch(error) {
+  }
+
+  catch(error) {
 
     console.error(error);
+
+
+    hideUploadProgress();
+
 
     alert(
       "Başvuru sırasında hata oluştu:\n\n" +
       error.message
     );
+
+  }
+
+  finally {
+
+    state.submitting =
+      false;
 
   }
 
