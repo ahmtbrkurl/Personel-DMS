@@ -2,7 +2,7 @@
  * Demo frontend.
  * For production, set API_URL to the deployed Google Apps Script Web App URL.
  */
-const API_URL = ""; // e.g. https://script.google.com/macros/s/DEPLOYMENT_ID/exec
+const API_URL = "https://script.google.com/macros/s/AKfycbwPMm6sjG_viMpjyW9zhNsGfDA9PKjckV47pvMplonGOqS-FNOnDxbl47EYF67Lmk4/exec";
 
 const demoForm = {
   group: "FORMEN",
