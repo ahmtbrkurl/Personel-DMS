@@ -1006,3 +1006,19 @@ function showSuccess(personId,manageToken){
 // --------------------------------------------------
 
 checkManageLink();
+const manageStyle =
+  document.createElement("style");
+
+manageStyle.textContent = `
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+document.head.appendChild(manageStyle);
