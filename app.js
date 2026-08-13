@@ -98,14 +98,173 @@ function validate(fields){
   return true;
 }
 
-async function submitApplication(){
-  if(!API_URL){
-    const fakeId="PER-2026-"+String(Math.floor(Math.random()*999999)+1).padStart(6,"0");
-    showSuccess(fakeId,"DEMO-PERSONAL-"+Math.random().toString(36).slice(2,10).toUpperCase());
-    return;
+async function apiPost(data){
+
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
+    body: JSON.stringify(data)
+  });
+
+  const text = await response.text();
+
+  let result;
+
+  try {
+    result = JSON.parse(text);
+  } catch(e) {
+    throw new Error("Backend geçerli JSON döndürmedi: " + text);
   }
-  // Production implementation: multipart upload is handled by the Apps Script endpoint.
-  alert("Backend bağlantısı yapılandırılmamış.");
+
+  if(!result.success){
+    throw new Error(result.error || "Backend işlemi başarısız.");
+  }
+
+  return result;
+}
+
+
+function fileToBase64(file){
+
+  return new Promise((resolve, reject) => {
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+
+      const result = reader.result;
+
+      // data:application/pdf;base64,XXXX
+      // kısmından sadece XXXX bölümünü alıyoruz.
+
+      const base64 = String(result).split(",")[1];
+
+      resolve(base64);
+    };
+
+    reader.onerror = () => {
+      reject(new Error("Dosya okunamadı: " + file.name));
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+
+async function submitApplication(){
+
+  try {
+
+    // --------------------------------------------------
+    // 1. PERSONEL OLUŞTUR
+    // --------------------------------------------------
+
+    const personnelResult = await apiPost({
+
+      action: "createPersonnel",
+
+      first_name: state.values.firstName,
+      last_name: state.values.lastName,
+      national_id: state.values.nationalId,
+      passport_no: state.values.passport || "",
+      group_id: "GRP-FORMEN",
+      phone: state.values.phone || "",
+      email: state.values.email || ""
+
+    });
+
+
+    if(!personnelResult.personnel_id){
+
+      throw new Error(
+        "Personel oluşturuldu ancak personnel_id alınamadı."
+      );
+
+    }
+
+
+    const personnelId = personnelResult.personnel_id;
+
+
+    // --------------------------------------------------
+    // 2. BELGELERİ YÜKLE
+    // --------------------------------------------------
+
+    const documentFields = state.form.fields.filter(
+      f => f.type === "document" || f.type === "photo"
+    );
+
+
+    for(const field of documentFields){
+
+      const file = state.files[field.id];
+
+      // Opsiyonel belge yoksa geç
+      if(!file){
+
+        if(!field.required){
+          continue;
+        }
+
+        throw new Error(
+          field.label + " yüklenmedi."
+        );
+      }
+
+
+      const base64 = await fileToBase64(file);
+
+
+      const documentResult = await apiPost({
+
+        action: "uploadDocument",
+
+        personnel_id: personnelId,
+
+        document_code: field.code,
+
+        file_name: file.name,
+
+        mime_type: file.type,
+
+        file_base64: base64
+
+      });
+
+
+      if(!documentResult.success){
+
+        throw new Error(
+          field.label + " yüklenirken hata oluştu."
+        );
+      }
+
+    }
+
+
+    // --------------------------------------------------
+    // 3. BAŞARILI
+    // --------------------------------------------------
+
+    showSuccess(
+      personnelId,
+      personnelResult.token || ""
+    );
+
+
+  } catch(error) {
+
+    console.error(error);
+
+    alert(
+      "Başvuru sırasında hata oluştu:\n\n" +
+      error.message
+    );
+
+  }
+
 }
 
 function showSuccess(personId,manageToken){
