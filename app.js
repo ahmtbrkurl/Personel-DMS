@@ -30,7 +30,372 @@ document.getElementById("startBtn").addEventListener("click", async ()=>{
   // In production: fetchFormDefinition(state.token)
   renderForm();
 });
+// --------------------------------------------------
+// PERSONEL YÖNETİM LİNKİNİ OTOMATİK ALGILA
+// --------------------------------------------------
 
+async function checkManageLink(){
+
+  const params = new URLSearchParams(
+    window.location.search
+  );
+
+  const manageToken =
+    params.get("manage");
+
+  // manage parametresi yoksa normal başvuru ekranı devam eder
+  if(!manageToken){
+    return;
+  }
+
+  try {
+
+    // Normal giriş ekranını gizle
+    document.getElementById("landing")
+      ?.classList.add("hidden");
+
+    // Yükleniyor ekranı
+    const view =
+      document.getElementById("formView");
+
+    view.classList.remove("hidden");
+
+    view.innerHTML = `
+      <div class="card">
+        <div style="
+          text-align:center;
+          padding:40px 20px;
+        ">
+
+          <div style="
+            width:60px;
+            height:60px;
+            margin:0 auto 20px;
+            border:6px solid #e5e7eb;
+            border-top-color:#2563eb;
+            border-radius:50%;
+            animation:spin 1s linear infinite;
+          "></div>
+
+          <h2>Personel kaydı yükleniyor</h2>
+
+          <p style="
+            color:#6b7280;
+            margin-top:10px;
+          ">
+            Lütfen bekleyiniz...
+          </p>
+
+        </div>
+      </div>
+    `;
+
+    const result =
+      await apiPost({
+
+        action:
+          "getPersonnelByManageToken",
+
+        manage_token:
+          manageToken
+
+      });
+
+
+    if(!result.success){
+
+      throw new Error(
+        result.error ||
+        "Personel kaydı bulunamadı."
+      );
+
+    }
+
+
+    renderManagePage(
+      result.personnel,
+      result.documents || []
+    );
+
+
+  }
+  catch(error){
+
+    console.error(
+      "Manage link hatası:",
+      error
+    );
+
+    const view =
+      document.getElementById("formView");
+
+    view.classList.remove("hidden");
+
+    view.innerHTML = `
+      <div class="card">
+
+        <h2>Personel kaydı bulunamadı</h2>
+
+        <p style="
+          color:#dc2626;
+          margin-top:15px;
+        ">
+          ${esc(error.message)}
+        </p>
+
+        <div style="
+          margin-top:25px;
+        ">
+          <button
+            class="primary"
+            onclick="window.location.href=window.location.pathname"
+          >
+            Yeni Başvuru
+          </button>
+        </div>
+
+      </div>
+    `;
+
+  }
+
+}
+
+
+// --------------------------------------------------
+// PERSONEL YÖNETİM EKRANI
+// --------------------------------------------------
+
+function renderManagePage(
+  personnel,
+  documents
+){
+
+  const view =
+    document.getElementById("formView");
+
+  view.classList.remove("hidden");
+
+  const documentRows =
+    documents.length
+      ? documents.map(doc => {
+
+          const name =
+            doc.file_name ||
+            doc.filename ||
+            doc.name ||
+            "Belge";
+
+          const code =
+            doc.document_code ||
+            doc.code ||
+            "";
+
+          const url =
+            doc.file_url ||
+            doc.drive_url ||
+            doc.url ||
+            "";
+
+          return `
+            <div style="
+              display:flex;
+              justify-content:space-between;
+              align-items:center;
+              gap:15px;
+              padding:14px;
+              margin-bottom:10px;
+              border:1px solid #e5e7eb;
+              border-radius:10px;
+              background:#f9fafb;
+            ">
+
+              <div>
+
+                <strong>
+                  ${esc(code)}
+                </strong>
+
+                <div style="
+                  margin-top:4px;
+                  color:#6b7280;
+                  font-size:13px;
+                ">
+                  ${esc(name)}
+                </div>
+
+              </div>
+
+              ${
+                url
+                  ? `
+                    <a
+                      href="${esc(url)}"
+                      target="_blank"
+                      class="primary"
+                      style="
+                        text-decoration:none;
+                        padding:9px 14px;
+                        border-radius:8px;
+                      "
+                    >
+                      Belgeyi Aç
+                    </a>
+                  `
+                  : `
+                    <span style="
+                      color:#16a34a;
+                      font-weight:600;
+                    ">
+                      Yüklendi
+                    </span>
+                  `
+              }
+
+            </div>
+          `;
+
+        }).join("")
+      : `
+          <div style="
+            padding:20px;
+            background:#fef3c7;
+            border-radius:10px;
+            color:#92400e;
+          ">
+            Henüz yüklenmiş belge bulunmuyor.
+          </div>
+        `;
+
+
+  view.innerHTML = `
+
+    <div class="card">
+
+      <div class="step">
+        PERSONEL YÖNETİMİ
+      </div>
+
+      <h2>
+        Personel Bilgileri
+      </h2>
+
+      <div style="
+        margin-top:20px;
+        padding:20px;
+        background:#f8fafc;
+        border-radius:12px;
+      ">
+
+        <div style="
+          display:grid;
+          grid-template-columns:
+            repeat(auto-fit,minmax(220px,1fr));
+          gap:15px;
+        ">
+
+          <div>
+            <strong>Personel No</strong>
+            <div>
+              ${esc(
+                personnel.personnel_id || ""
+              )}
+            </div>
+          </div>
+
+          <div>
+            <strong>Ad</strong>
+            <div>
+              ${esc(
+                personnel.first_name || ""
+              )}
+            </div>
+          </div>
+
+          <div>
+            <strong>Soyad</strong>
+            <div>
+              ${esc(
+                personnel.last_name || ""
+              )}
+            </div>
+          </div>
+
+          <div>
+            <strong>T.C. Kimlik No</strong>
+            <div>
+              ${esc(
+                personnel.national_id || ""
+              )}
+            </div>
+          </div>
+
+          <div>
+            <strong>Telefon</strong>
+            <div>
+              ${esc(
+                personnel.phone || ""
+              )}
+            </div>
+          </div>
+
+          <div>
+            <strong>Durum</strong>
+            <div style="
+              color:#16a34a;
+              font-weight:600;
+            ">
+              ${esc(
+                personnel.status || "ACTIVE"
+              )}
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <h3 style="
+        margin-top:30px;
+        margin-bottom:15px;
+      ">
+        Yüklenen Belgeler
+      </h3>
+
+
+      <div>
+        ${documentRows}
+      </div>
+
+
+      <div style="
+        margin-top:30px;
+        padding:16px;
+        background:#eff6ff;
+        border-radius:10px;
+        color:#1e40af;
+      ">
+
+        <strong>
+          Bilgi
+        </strong>
+
+        <div style="
+          margin-top:6px;
+        ">
+          Bu bağlantı size özel personel yönetim
+          bağlantınızdır. Bağlantıyı kaybetmemeniz
+          önerilir.
+        </div>
+
+      </div>
+
+    </div>
+
+  `;
+
+}
 function renderForm(){
   document.getElementById("landing").classList.add("hidden");
   const view=document.getElementById("formView");
@@ -636,3 +1001,8 @@ function showSuccess(personId,manageToken){
   document.getElementById("manageLink").value=`${location.origin}${location.pathname}?manage=${manageToken}`;
   document.getElementById("copyLink").onclick=()=>navigator.clipboard.writeText(document.getElementById("manageLink").value);
 }
+// --------------------------------------------------
+// SAYFA AÇILDIĞINDA MANAGE LINK KONTROLÜ
+// --------------------------------------------------
+
+checkManageLink();
