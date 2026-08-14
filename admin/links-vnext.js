@@ -1,352 +1,3023 @@
-/* STS Personnel DMS - VNext STEP 02
- * GitHub -> admin/links-vnext.js
- * Application Link Management UI
+/* ============================================================
+ * STS PERSONEL DMS
+ * Başvuru Linkleri Yönetimi
  *
- * Google Apps Script'e dokunmaz.
- * Backend API: Google Apps Script Web App.
- */
-(function(){
+ * DOSYA:
+ * GitHub -> admin/links-vnext.js
+ *
+ * Bu dosya:
+ * - Kampanya oluşturur
+ * - Başvuru linki oluşturur
+ * - Linkleri listeler
+ * - Link düzenler
+ * - Link aktif/pasif yapar
+ * - TR / RU / EN dil desteği sağlar
+ * ============================================================ */
+
+(function () {
+
   "use strict";
 
-  const API_URL = "https://script.google.com/macros/s/AKfycbwPMm6sjG_viMpjyW9zhNsGfDA9PKjckV47pvMplonGOqS-FNOnDxbl47EYF67Lmk4/exec";
-  const PAGE_URL = "https://ahmtbrkurl.github.io/Personel-DMS/";
-  let lang = localStorage.getItem("sts_dms_lang") || "tr";
-  let options = {groups:[],forms:[],campaigns:[]};
 
-  const T={
-    tr:{
-      title:"Başvuru Linkleri",desc:"HR tarafından oluşturulan başvuru kampanyalarını ve linklerini yönetin.",
-      newCampaign:"Yeni Kampanya",createLink:"Başvuru Linki Oluştur",campaign:"Kampanya",group:"Personel Grubu",
-      form:"Form",max:"Maksimum Katılım",start:"Başlangıç",end:"Bitiş",campaignName:"Kampanya Adı",
-      month:"Kampanya Ayı",description:"Açıklama",save:"Kampanyayı Oluştur",cancel:"Temizle",active:"Aktif",
-      inactive:"Pasif",used:"Kullanım",remaining:"Kalan",code:"Başvuru Kodu",url:"Başvuru Linki",
-      copy:"Linki Kopyala",copied:"Kopyalandı",noLinks:"Henüz başvuru linki oluşturulmadı.",
-      noOptions:"Önce grup ve form tanımlarının bulunması gerekir.",success:"Başvuru linki oluşturuldu.",
-      campaignSuccess:"Kampanya oluşturuldu.",required:"Zorunlu alanları doldurun.",error:"İşlem başarısız."
+  // ==========================================================
+  // AYARLAR
+  // ==========================================================
+
+  const API_URL =
+    "https://script.google.com/macros/s/AKfycbwPMm6sjG_viMpjyW9zhNsGfDA9PKjckV47pvMplonGOqS-FNOnDxbl47EYF67Lmk4/exec";
+
+
+  const PAGE_URL =
+    "https://ahmtbrkurl.github.io/Personel-DMS/";
+
+
+  const LANG_KEY =
+    "sts_dms_lang";
+
+
+  let lang =
+    localStorage.getItem(LANG_KEY) ||
+    "tr";
+
+
+  let options = {
+
+    groups: [],
+
+    forms: [],
+
+    campaigns: []
+
+  };
+
+
+  let links = [];
+
+
+  // ==========================================================
+  // DİL METİNLERİ
+  // ==========================================================
+
+  const T = {
+
+    tr: {
+
+      title:
+        "Başvuru Linkleri",
+
+      desc:
+        "Oluşturulan başvuru linklerini görüntüleyin, kopyalayın ve yönetin.",
+
+      newCampaign:
+        "Yeni Kampanya",
+
+      createLink:
+        "Başvuru Linki Oluştur",
+
+      campaign:
+        "Kampanya",
+
+      group:
+        "Personel Grubu",
+
+      form:
+        "Form",
+
+      max:
+        "Maksimum Katılım",
+
+      start:
+        "Başlangıç",
+
+      end:
+        "Bitiş",
+
+      campaignName:
+        "Kampanya Adı",
+
+      month:
+        "Kampanya Ayı",
+
+      description:
+        "Açıklama",
+
+      save:
+        "Kampanyayı Oluştur",
+
+      clear:
+        "Temizle",
+
+      active:
+        "Aktif",
+
+      inactive:
+        "Pasif",
+
+      used:
+        "Kullanım",
+
+      remaining:
+        "Kalan",
+
+      code:
+        "Başvuru Kodu",
+
+      url:
+        "Başvuru Linki",
+
+      copy:
+        "Kopyala",
+
+      copied:
+        "Kopyalandı",
+
+      edit:
+        "Düzenle",
+
+      saveChanges:
+        "Değişiklikleri Kaydet",
+
+      cancel:
+        "İptal",
+
+      noLinks:
+        "Henüz başvuru linki oluşturulmadı.",
+
+      success:
+        "Başvuru linki oluşturuldu.",
+
+      campaignSuccess:
+        "Kampanya oluşturuldu.",
+
+      required:
+        "Zorunlu alanları doldurun.",
+
+      error:
+        "İşlem başarısız.",
+
+      editTitle:
+        "Başvuru Linkini Düzenle",
+
+      confirmInactive:
+        "Bu link pasifleştirilsin mi?",
+
+      confirmActive:
+        "Bu link aktifleştirilsin mi?",
+
+      refresh:
+        "Yenile",
+
+      loading:
+        "Yükleniyor...",
+
+      noOptions:
+        "Seçilebilir kayıt bulunamadı."
+
     },
-    ru:{
-      title:"Ссылки на заявки",desc:"Управляйте кампаниями и ссылками на заявки, созданными HR.",
-      newCampaign:"Новая кампания",createLink:"Создать ссылку",campaign:"Кампания",group:"Группа персонала",
-      form:"Форма",max:"Максимум участников",start:"Начало",end:"Окончание",campaignName:"Название кампании",
-      month:"Месяц кампании",description:"Описание",save:"Создать кампанию",cancel:"Очистить",active:"Активна",
-      inactive:"Неактивна",used:"Использовано",remaining:"Осталось",code:"Код заявки",url:"Ссылка",
-      copy:"Копировать",copied:"Скопировано",noLinks:"Ссылки на заявки пока не созданы.",
-      noOptions:"Сначала должны быть доступны группы и формы.",success:"Ссылка создана.",
-      campaignSuccess:"Кампания создана.",required:"Заполните обязательные поля.",error:"Операция не выполнена."
+
+
+    ru: {
+
+      title:
+        "Ссылки на заявки",
+
+      desc:
+        "Просмотр, копирование и управление ссылками на заявки.",
+
+      newCampaign:
+        "Новая кампания",
+
+      createLink:
+        "Создать ссылку",
+
+      campaign:
+        "Кампания",
+
+      group:
+        "Группа персонала",
+
+      form:
+        "Форма",
+
+      max:
+        "Максимум участников",
+
+      start:
+        "Начало",
+
+      end:
+        "Окончание",
+
+      campaignName:
+        "Название кампании",
+
+      month:
+        "Месяц кампании",
+
+      description:
+        "Описание",
+
+      save:
+        "Создать кампанию",
+
+      clear:
+        "Очистить",
+
+      active:
+        "Активна",
+
+      inactive:
+        "Неактивна",
+
+      used:
+        "Использовано",
+
+      remaining:
+        "Осталось",
+
+      code:
+        "Код заявки",
+
+      url:
+        "Ссылка",
+
+      copy:
+        "Копировать",
+
+      copied:
+        "Скопировано",
+
+      edit:
+        "Изменить",
+
+      saveChanges:
+        "Сохранить изменения",
+
+      cancel:
+        "Отмена",
+
+      noLinks:
+        "Ссылки пока не созданы.",
+
+      success:
+        "Ссылка создана.",
+
+      campaignSuccess:
+        "Кампания создана.",
+
+      required:
+        "Заполните обязательные поля.",
+
+      error:
+        "Операция не выполнена.",
+
+      editTitle:
+        "Редактирование ссылки",
+
+      confirmInactive:
+        "Отключить ссылку?",
+
+      confirmActive:
+        "Активировать ссылку?",
+
+      refresh:
+        "Обновить",
+
+      loading:
+        "Загрузка...",
+
+      noOptions:
+        "Нет доступных записей."
+
     },
-    en:{
-      title:"Application Links",desc:"Manage application campaigns and links created by HR.",
-      newCampaign:"New Campaign",createLink:"Create Application Link",campaign:"Campaign",group:"Personnel Group",
-      form:"Form",max:"Maximum Participants",start:"Start",end:"End",campaignName:"Campaign Name",
-      month:"Campaign Month",description:"Description",save:"Create Campaign",cancel:"Clear",active:"Active",
-      inactive:"Inactive",used:"Used",remaining:"Remaining",code:"Application Code",url:"Application Link",
-      copy:"Copy Link",copied:"Copied",noLinks:"No application links have been created yet.",
-      noOptions:"Groups and forms must be available first.",success:"Application link created.",
-      campaignSuccess:"Campaign created.",required:"Please fill in the required fields.",error:"Operation failed."
+
+
+    en: {
+
+      title:
+        "Application Links",
+
+      desc:
+        "View, copy and manage application links.",
+
+      newCampaign:
+        "New Campaign",
+
+      createLink:
+        "Create Application Link",
+
+      campaign:
+        "Campaign",
+
+      group:
+        "Personnel Group",
+
+      form:
+        "Form",
+
+      max:
+        "Maximum Participants",
+
+      start:
+        "Start",
+
+      end:
+        "End",
+
+      campaignName:
+        "Campaign Name",
+
+      month:
+        "Campaign Month",
+
+      description:
+        "Description",
+
+      save:
+        "Create Campaign",
+
+      clear:
+        "Clear",
+
+      active:
+        "Active",
+
+      inactive:
+        "Inactive",
+
+      used:
+        "Used",
+
+      remaining:
+        "Remaining",
+
+      code:
+        "Application Code",
+
+      url:
+        "Application Link",
+
+      copy:
+        "Copy",
+
+      copied:
+        "Copied",
+
+      edit:
+        "Edit",
+
+      saveChanges:
+        "Save Changes",
+
+      cancel:
+        "Cancel",
+
+      noLinks:
+        "No application links have been created.",
+
+      success:
+        "Application link created.",
+
+      campaignSuccess:
+        "Campaign created.",
+
+      required:
+        "Please fill in the required fields.",
+
+      error:
+        "Operation failed.",
+
+      editTitle:
+        "Edit Application Link",
+
+      confirmInactive:
+        "Deactivate this link?",
+
+      confirmActive:
+        "Activate this link?",
+
+      refresh:
+        "Refresh",
+
+      loading:
+        "Loading...",
+
+      noOptions:
+        "No selectable records found."
+
     }
+
   };
 
-  const t=()=>T[lang]||T.tr;
-  const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 
-  const post=async data=>{
-    const r=await fetch(API_URL,{
-      method:"POST",
-      headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body:JSON.stringify(data)
-    });
-    const text=await r.text();
-    let x;
-    try{x=JSON.parse(text)}catch(e){throw new Error(text)}
-    if(!x.success)throw new Error(x.error||t().error);
-    return x;
-  };
+  function t() {
 
-  function inject(){
-    const page=document.getElementById("links");
-    if(!page||document.getElementById("vnextLinksRoot"))return;
+    return T[lang] || T.tr;
 
-    const panel=page.querySelector(".panel");
-    panel.innerHTML=`
-      <div class="panel-head">
-        <div>
-          <h3 id="vnextTitle"></h3>
-          <p id="vnextDesc"></p>
-        </div>
-        <div class="vnext-lang">
-          <button data-l="tr">TR</button>
-          <button data-l="ru">RU</button>
-          <button data-l="en">EN</button>
-        </div>
-      </div>
-      <div id="vnextLinksRoot"></div>
-    `;
-    render();
   }
 
-  function render(){
-    const root=document.getElementById("vnextLinksRoot");
-    if(!root)return;
 
-    document.getElementById("vnextTitle").textContent=t().title;
-    document.getElementById("vnextDesc").textContent=t().desc;
+  // ==========================================================
+  // HTML ESCAPE
+  // ==========================================================
 
-    document.querySelectorAll("#links .vnext-lang button")
-      .forEach(b=>b.classList.toggle("active",b.dataset.l===lang));
+  function esc(value) {
 
-    root.innerHTML=`
-      <div class="vnext-link-tools">
-        <div class="vnext-box">
-          <h4>${t().createLink}</h4>
-          <div class="vnext-grid">
-            <label class="full">${t().campaign}
-              <select id="vCampaign">
-                <option value="">—</option>
-                ${options.campaigns.map(x=>`
-                  <option value="${esc(x.id)}">
-                    ${esc(x.name)}${x.month?" — "+esc(x.month):""}
-                  </option>`).join("")}
-              </select>
-            </label>
+    return String(value ?? "")
+      .replace(
+        /[&<>"']/g,
+        function (m) {
 
-            <label>${t().group}
-              <select id="vGroup">
-                <option value="">—</option>
-                ${options.groups.map(x=>`
-                  <option value="${esc(x.id)}">${esc(x.name)}</option>`).join("")}
-              </select>
-            </label>
+          return {
 
-            <label>${t().form}
-              <select id="vForm">
-                <option value="">—</option>
-                ${options.forms.map(x=>`
-                  <option value="${esc(x.id)}">${esc(x.name)}</option>`).join("")}
-              </select>
-            </label>
+            "&": "&amp;",
 
-            <label>${t().max}
-              <input id="vMax" type="number" min="1" value="30">
-            </label>
+            "<": "&lt;",
 
-            <label>${t().start}
-              <input id="vStart" type="datetime-local">
-            </label>
+            ">": "&gt;",
 
-            <label>${t().end}
-              <input id="vEnd" type="datetime-local">
-            </label>
-          </div>
+            '"': "&quot;",
 
-          <div class="vnext-actions">
-            <button class="secondary" id="vReload">${t().cancel}</button>
-            <button class="primary" id="vCreate">${t().createLink}</button>
-          </div>
-          <div id="vResult"></div>
+            "'": "&#039;"
+
+          }[m];
+
+        }
+      );
+
+  }
+
+
+  // ==========================================================
+  // API
+  // ==========================================================
+
+  async function post(data) {
+
+    const response =
+      await fetch(
+        API_URL,
+        {
+
+          method:
+            "POST",
+
+          headers: {
+
+            "Content-Type":
+              "text/plain;charset=utf-8"
+
+          },
+
+          body:
+            JSON.stringify(data)
+
+        }
+      );
+
+
+    const text =
+      await response.text();
+
+
+    let result;
+
+
+    try {
+
+      result =
+        JSON.parse(text);
+
+    }
+
+    catch (error) {
+
+      throw new Error(
+        text ||
+        "API geçerli JSON döndürmedi."
+      );
+
+    }
+
+
+    if (!result.success) {
+
+      throw new Error(
+        result.error ||
+        t().error
+      );
+
+    }
+
+
+    return result;
+
+  }
+
+
+  // ==========================================================
+  // LINK URL
+  // ==========================================================
+
+  function linkUrl(link) {
+
+    if (!link) {
+
+      return "";
+
+    }
+
+
+    if (link.url) {
+
+      return link.url;
+
+    }
+
+
+    if (link.token) {
+
+      return (
+        PAGE_URL +
+        "?token=" +
+        encodeURIComponent(
+          link.token
+        )
+      );
+
+    }
+
+
+    return "";
+
+  }
+
+
+  // ==========================================================
+  // TARİH
+  // ==========================================================
+
+  function toDateTimeLocal(value) {
+
+    if (!value) {
+
+      return "";
+
+    }
+
+
+    const date =
+      new Date(value);
+
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+
+      return "";
+
+    }
+
+
+    const pad =
+      number =>
+        String(number)
+          .padStart(
+            2,
+            "0"
+          );
+
+
+    return (
+
+      date.getFullYear() +
+      "-" +
+      pad(
+        date.getMonth() + 1
+      ) +
+      "-" +
+      pad(
+        date.getDate()
+      ) +
+      "T" +
+      pad(
+        date.getHours()
+      ) +
+      ":" +
+      pad(
+        date.getMinutes()
+      )
+
+    );
+
+  }
+
+
+  function formatDate(value) {
+
+    if (!value) {
+
+      return "—";
+
+    }
+
+
+    const date =
+      new Date(value);
+
+
+    if (
+      Number.isNaN(
+        date.getTime()
+      )
+    ) {
+
+      return "—";
+
+    }
+
+
+    return date.toLocaleString(
+      "tr-TR"
+    );
+
+  }
+
+
+  // ==========================================================
+  // KOPYALAMA
+  // ==========================================================
+
+  async function copyText(text) {
+
+    if (!text) {
+
+      alert(
+        "Link bulunamadı."
+      );
+
+      return;
+
+    }
+
+
+    try {
+
+      await navigator
+        .clipboard
+        .writeText(
+          text
+        );
+
+    }
+
+    catch (error) {
+
+      const textarea =
+        document.createElement(
+          "textarea"
+        );
+
+
+      textarea.value =
+        text;
+
+
+      textarea.style.position =
+        "fixed";
+
+
+      textarea.style.opacity =
+        "0";
+
+
+      document.body.appendChild(
+        textarea
+      );
+
+
+      textarea.select();
+
+
+      document.execCommand(
+        "copy"
+      );
+
+
+      textarea.remove();
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // SAYFAYA ENJEKTE ET
+  // ==========================================================
+
+  function inject() {
+
+    const page =
+      document.getElementById(
+        "links"
+      );
+
+
+    if (
+      !page ||
+      document.getElementById(
+        "vnextLinksRoot"
+      )
+    ) {
+
+      return;
+
+    }
+
+
+    const panel =
+      page.querySelector(
+        ".panel"
+      );
+
+
+    if (!panel) {
+
+      return;
+
+    }
+
+
+    panel.innerHTML = `
+
+      <div class="panel-head">
+
+        <div>
+
+          <h3 id="vnextTitle"></h3>
+
+          <p id="vnextDesc"></p>
+
         </div>
 
-        <div class="vnext-box">
-          <h4>${t().newCampaign}</h4>
-          <div class="vnext-grid">
-            <label class="full">${t().campaignName}
-              <input id="vCampaignName">
-            </label>
-            <label>${t().month}
-              <input id="vCampaignMonth" type="month">
-            </label>
-            <label>${t().description}
-              <input id="vCampaignDesc">
-            </label>
-          </div>
 
-          <div class="vnext-actions">
-            <button class="primary" id="vCampaignCreate">${t().save}</button>
-          </div>
+        <div
+          class="vnext-lang"
+        >
 
-          <div class="vnext-muted">
-            Bir kampanya altında birden fazla başvuru linki oluşturabilirsiniz.
-            Her link ayrı kod ve ayrı Drive klasörü alır.
-          </div>
+          <button
+            type="button"
+            data-l="tr"
+          >
+            TR
+          </button>
+
+          <button
+            type="button"
+            data-l="ru"
+          >
+            RU
+          </button>
+
+          <button
+            type="button"
+            data-l="en"
+          >
+            EN
+          </button>
+
         </div>
+
       </div>
 
-      <div class="vnext-box">
-        <h4>${t().title}</h4>
-        <div id="vLinksList" class="vnext-table-wrap"></div>
-      </div>
+
+      <div
+        id="vnextLinksRoot"
+      ></div>
+
     `;
+
+
+    render();
+
+
+    load();
+
+  }
+
+
+  // ==========================================================
+  // ANA RENDER
+  // ==========================================================
+
+  function render() {
+
+    const root =
+      document.getElementById(
+        "vnextLinksRoot"
+      );
+
+
+    if (!root) {
+
+      return;
+
+    }
+
+
+    const title =
+      document.getElementById(
+        "vnextTitle"
+      );
+
+
+    const desc =
+      document.getElementById(
+        "vnextDesc"
+      );
+
+
+    if (title) {
+
+      title.textContent =
+        t().title;
+
+    }
+
+
+    if (desc) {
+
+      desc.textContent =
+        t().desc;
+
+    }
+
+
+    document
+      .querySelectorAll(
+        "#links .vnext-lang button"
+      )
+      .forEach(
+        button => {
+
+          button.classList.toggle(
+            "active",
+            button.dataset.l ===
+              lang
+          );
+
+        }
+      );
+
+
+    root.innerHTML = `
+
+      <div
+        class="vnext-link-tools"
+      >
+
+        <!-- =========================================
+             LINK OLUŞTUR
+             ========================================= -->
+
+        <div
+          class="vnext-box"
+        >
+
+          <h4>
+            ${t().createLink}
+          </h4>
+
+
+          <div
+            class="vnext-grid"
+          >
+
+            <label
+              class="full"
+            >
+
+              ${t().campaign}
+
+              <select
+                id="vCampaign"
+              >
+
+                <option value="">
+                  —
+                </option>
+
+                ${
+                  options.campaigns
+                    .map(
+                      item =>
+                        `
+                        <option
+                          value="${esc(item.id)}"
+                        >
+                          ${esc(item.name)}
+                          ${
+                            item.month
+                              ? " — " +
+                                esc(item.month)
+                              : ""
+                          }
+                        </option>
+                        `
+                    )
+                    .join("")
+                }
+
+              </select>
+
+            </label>
+
+
+            <label>
+
+              ${t().group}
+
+              <select
+                id="vGroup"
+              >
+
+                <option value="">
+                  —
+                </option>
+
+                ${
+                  options.groups
+                    .map(
+                      item =>
+                        `
+                        <option
+                          value="${esc(item.id)}"
+                        >
+                          ${esc(item.name)}
+                        </option>
+                        `
+                    )
+                    .join("")
+                }
+
+              </select>
+
+            </label>
+
+
+            <label>
+
+              ${t().form}
+
+              <select
+                id="vForm"
+              >
+
+                <option value="">
+                  —
+                </option>
+
+                ${
+                  options.forms
+                    .map(
+                      item =>
+                        `
+                        <option
+                          value="${esc(item.id)}"
+                        >
+                          ${esc(item.name)}
+                        </option>
+                        `
+                    )
+                    .join("")
+                }
+
+              </select>
+
+            </label>
+
+
+            <label>
+
+              ${t().max}
+
+              <input
+                id="vMax"
+                type="number"
+                min="1"
+                value="30"
+              >
+
+            </label>
+
+
+            <label>
+
+              ${t().start}
+
+              <input
+                id="vStart"
+                type="datetime-local"
+              >
+
+            </label>
+
+
+            <label>
+
+              ${t().end}
+
+              <input
+                id="vEnd"
+                type="datetime-local"
+              >
+
+            </label>
+
+          </div>
+
+
+          <div
+            class="vnext-actions"
+          >
+
+            <button
+              type="button"
+              class="secondary"
+              id="vReload"
+            >
+              ${t().clear}
+            </button>
+
+
+            <button
+              type="button"
+              class="primary"
+              id="vCreate"
+            >
+              ${t().createLink}
+            </button>
+
+          </div>
+
+
+          <div
+            id="vResult"
+          ></div>
+
+        </div>
+
+
+        <!-- =========================================
+             KAMPANYA OLUŞTUR
+             ========================================= -->
+
+        <div
+          class="vnext-box"
+        >
+
+          <h4>
+            ${t().newCampaign}
+          </h4>
+
+
+          <div
+            class="vnext-grid"
+          >
+
+            <label
+              class="full"
+            >
+
+              ${t().campaignName}
+
+              <input
+                id="vCampaignName"
+              >
+
+            </label>
+
+
+            <label>
+
+              ${t().month}
+
+              <input
+                id="vCampaignMonth"
+                type="month"
+              >
+
+            </label>
+
+
+            <label>
+
+              ${t().description}
+
+              <input
+                id="vCampaignDesc"
+              >
+
+            </label>
+
+          </div>
+
+
+          <div
+            class="vnext-actions"
+          >
+
+            <button
+              type="button"
+              class="primary"
+              id="vCampaignCreate"
+            >
+              ${t().save}
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- =========================================
+           LİNKLER
+           ========================================= -->
+
+      <div
+        class="vnext-box"
+      >
+
+        <div
+          style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            gap:10px;
+          "
+        >
+
+          <h4
+            style="margin:0"
+          >
+            ${t().title}
+          </h4>
+
+
+          <button
+            type="button"
+            class="secondary"
+            id="vRefresh"
+          >
+            ${t().refresh}
+          </button>
+
+        </div>
+
+
+        <div
+          id="vLinksList"
+          class="vnext-table-wrap"
+          style="margin-top:14px"
+        ></div>
+
+      </div>
+
+    `;
+
 
     bind();
+
+
     renderList();
+
   }
 
-  function bind(){
-    document.querySelectorAll("#links .vnext-lang button")
-      .forEach(b=>b.onclick=()=>{
-        lang=b.dataset.l;
-        localStorage.setItem("sts_dms_lang",lang);
-        render();
-      });
 
-    document.getElementById("vReload").onclick=load;
-    document.getElementById("vCampaignCreate").onclick=createCampaign;
-    document.getElementById("vCreate").onclick=createLink;
+  // ==========================================================
+  // EVENTLER
+  // ==========================================================
+
+  function bind() {
+
+    document
+      .querySelectorAll(
+        "#links .vnext-lang button"
+      )
+      .forEach(
+        button => {
+
+          button.onclick =
+            function () {
+
+              lang =
+                button.dataset.l ||
+                "tr";
+
+
+              localStorage.setItem(
+                LANG_KEY,
+                lang
+              );
+
+
+              render();
+
+            };
+
+        }
+      );
+
+
+    const clearButton =
+      document.getElementById(
+        "vReload"
+      );
+
+
+    if (clearButton) {
+
+      clearButton.onclick =
+        clearCreateForm;
+
+    }
+
+
+    const campaignButton =
+      document.getElementById(
+        "vCampaignCreate"
+      );
+
+
+    if (campaignButton) {
+
+      campaignButton.onclick =
+        createCampaign;
+
+    }
+
+
+    const createButton =
+      document.getElementById(
+        "vCreate"
+      );
+
+
+    if (createButton) {
+
+      createButton.onclick =
+        createLink;
+
+    }
+
+
+    const refreshButton =
+      document.getElementById(
+        "vRefresh"
+      );
+
+
+    if (refreshButton) {
+
+      refreshButton.onclick =
+        load;
+
+    }
+
   }
 
-  async function load(){
-    try{
-      const x=await post({action:"getApplicationLinkOptions"});
-      options=x;
 
-      const y=await post({action:"getApplicationLinks"});
-      window.__stsLinks=y.links||[];
+  // ==========================================================
+  // FORM TEMİZLE
+  // ==========================================================
 
-      render();
+  function clearCreateForm() {
+
+    const campaign =
+      document.getElementById(
+        "vCampaign"
+      );
+
+
+    const group =
+      document.getElementById(
+        "vGroup"
+      );
+
+
+    const form =
+      document.getElementById(
+        "vForm"
+      );
+
+
+    const max =
+      document.getElementById(
+        "vMax"
+      );
+
+
+    const start =
+      document.getElementById(
+        "vStart"
+      );
+
+
+    const end =
+      document.getElementById(
+        "vEnd"
+      );
+
+
+    if (campaign) {
+
+      campaign.value =
+        "";
+
     }
-    catch(e){
-      const box=document.getElementById("vLinksList");
-      if(box)box.innerHTML=`<div class="vnext-error">${esc(e.message)}</div>`;
+
+
+    if (group) {
+
+      group.value =
+        "";
+
     }
+
+
+    if (form) {
+
+      form.value =
+        "";
+
+    }
+
+
+    if (max) {
+
+      max.value =
+        "30";
+
+    }
+
+
+    if (start) {
+
+      start.value =
+        "";
+
+    }
+
+
+    if (end) {
+
+      end.value =
+        "";
+
+    }
+
+
+    const result =
+      document.getElementById(
+        "vResult"
+      );
+
+
+    if (result) {
+
+      result.innerHTML =
+        "";
+
+    }
+
   }
 
-  async function createCampaign(){
-    const name=document.getElementById("vCampaignName").value.trim();
-    const month=document.getElementById("vCampaignMonth").value;
-    const desc=document.getElementById("vCampaignDesc").value.trim();
 
-    if(!name||!month){
-      alert(t().required);
-      return;
+  // ==========================================================
+  // VERİLERİ YÜKLE
+  // ==========================================================
+
+  async function load() {
+
+    const list =
+      document.getElementById(
+        "vLinksList"
+      );
+
+
+    if (list) {
+
+      list.innerHTML =
+        `<div class="empty">
+          ${t().loading}
+        </div>`;
+
     }
 
-    try{
-      await post({
-        action:"createApplicationGroup",
-        campaign_name:name,
-        campaign_month:month,
-        description:desc,
-        created_by:"HR"
-      });
 
-      alert(t().campaignSuccess);
-      await load();
-    }
-    catch(e){
-      alert(e.message);
-    }
-  }
+    try {
 
-  async function createLink(){
-    const campaign_id=document.getElementById("vCampaign").value;
-    const group_id=document.getElementById("vGroup").value;
-    const form_id=document.getElementById("vForm").value;
-    const max_uses=Number(document.getElementById("vMax").value||0);
-    const start_at=document.getElementById("vStart").value;
-    const end_at=document.getElementById("vEnd").value;
+      // ------------------------------------------------------
+      // GRUP + FORM + KAMPANYA
+      // ------------------------------------------------------
 
-    if(!campaign_id||!group_id||!form_id||!max_uses||!start_at||!end_at){
-      alert(t().required);
-      return;
-    }
+      const optionResult =
+        await post({
 
-    try{
-      const x=await post({
-        action:"createApplicationLink",
-        campaign_id,
-        group_id,
-        form_id,
-        max_uses,
-        start_at,
-        end_at,
-        created_by:"HR"
-      });
+          action:
+            "getApplicationLinkOptions"
 
-      document.getElementById("vResult").innerHTML=`
-        <div class="vnext-result">
-          <div><strong>${t().success}</strong></div>
-          <div class="vnext-code">${esc(x.application_code)}</div>
-          <div class="vnext-url">${esc(x.url)}</div>
-          <button class="secondary vnext-copy" id="copyGenerated">${t().copy}</button>
-        </div>
-      `;
+        });
 
-      document.getElementById("copyGenerated").onclick=async()=>{
-        await navigator.clipboard.writeText(x.url);
-        document.getElementById("copyGenerated").textContent=t().copied;
+
+      options = {
+
+        groups:
+          Array.isArray(
+            optionResult.groups
+          )
+            ? optionResult.groups
+            : [],
+
+        forms:
+          Array.isArray(
+            optionResult.forms
+          )
+            ? optionResult.forms
+            : [],
+
+        campaigns:
+          Array.isArray(
+            optionResult.campaigns
+          )
+            ? optionResult.campaigns
+            : []
+
       };
 
-      await load();
+
+      // ------------------------------------------------------
+      // MEVCUT LİNKLER
+      // ------------------------------------------------------
+
+      const linkResult =
+        await post({
+
+          action:
+            "getApplicationLinks"
+
+        });
+
+
+      links =
+        Array.isArray(
+          linkResult.links
+        )
+          ? linkResult.links
+          : [];
+
+
+      render();
+
     }
-    catch(e){
-      document.getElementById("vResult").innerHTML=
-        `<div class="vnext-error">${esc(e.message)}</div>`;
+
+    catch (error) {
+
+      console.error(
+        "Başvuru linkleri yüklenemedi:",
+        error
+      );
+
+
+      if (list) {
+
+        list.innerHTML =
+          `
+          <div
+            class="vnext-error"
+          >
+            ${esc(error.message)}
+          </div>
+          `;
+
+      }
+
     }
+
   }
 
-  function renderList(){
-    const box=document.getElementById("vLinksList");
-    if(!box)return;
 
-    const links=window.__stsLinks||[];
+  // ==========================================================
+  // KAMPANYA OLUŞTUR
+  // ==========================================================
 
-    if(!links.length){
-      box.innerHTML=`<div class="empty">${t().noLinks}</div>`;
+  async function createCampaign() {
+
+    const name =
+      String(
+        document.getElementById(
+          "vCampaignName"
+        )?.value ||
+        ""
+      )
+      .trim();
+
+
+    const month =
+      String(
+        document.getElementById(
+          "vCampaignMonth"
+        )?.value ||
+        ""
+      )
+      .trim();
+
+
+    const description =
+      String(
+        document.getElementById(
+          "vCampaignDesc"
+        )?.value ||
+        ""
+      )
+      .trim();
+
+
+    if (
+      !name ||
+      !month
+    ) {
+
+      alert(
+        t().required
+      );
+
       return;
+
     }
 
-    const groupName=id=>
-      (options.groups.find(x=>x.id===id)||{}).name||id;
 
-    box.innerHTML=`
-      <table class="vnext-table">
-        <thead>
-          <tr>
-            <th>${t().code}</th>
-            <th>${t().group}</th>
-            <th>${t().used}</th>
-            <th>${t().remaining}</th>
-            <th>${t().start}</th>
-            <th>${t().end}</th>
-            <th>${t().active}</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${links.map(x=>`
-            <tr>
-              <td><strong>${esc(x.application_code)}</strong></td>
-              <td>${esc(groupName(x.group_id))}</td>
-              <td>${x.used_count}/${x.max_uses}</td>
-              <td>${Math.max(0,x.max_uses-x.used_count)}</td>
-              <td>${x.start_at?esc(new Date(x.start_at).toLocaleString()):"—"}</td>
-              <td>${x.end_at?esc(new Date(x.end_at).toLocaleString()):"—"}</td>
-              <td>
-                ${x.status==="ACTIVE"
-                  ?`<span class="pill ok">${t().active}</span>`
-                  :`<span class="pill warn">${t().inactive}</span>`}
-              </td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    `;
+    try {
+
+      await post({
+
+        action:
+          "createApplicationGroup",
+
+        campaign_name:
+          name,
+
+        campaign_month:
+          month,
+
+        description:
+          description,
+
+        created_by:
+          "HR"
+
+      });
+
+
+      alert(
+        t().campaignSuccess
+      );
+
+
+      const nameInput =
+        document.getElementById(
+          "vCampaignName"
+        );
+
+
+      const monthInput =
+        document.getElementById(
+          "vCampaignMonth"
+        );
+
+
+      const descInput =
+        document.getElementById(
+          "vCampaignDesc"
+        );
+
+
+      if (nameInput) {
+
+        nameInput.value =
+          "";
+
+      }
+
+
+      if (monthInput) {
+
+        monthInput.value =
+          "";
+
+      }
+
+
+      if (descInput) {
+
+        descInput.value =
+          "";
+
+      }
+
+
+      await load();
+
+    }
+
+    catch (error) {
+
+      alert(
+        error.message
+      );
+
+    }
+
   }
 
-  const observer=new MutationObserver(()=>{
-    if(
-      document.getElementById("links") &&
-      !document.getElementById("vnextLinksRoot")
-    ){
-      inject();
-      load();
+
+  // ==========================================================
+  // BAŞVURU LİNKİ OLUŞTUR
+  // ==========================================================
+
+  async function createLink() {
+
+    const campaignId =
+      String(
+        document.getElementById(
+          "vCampaign"
+        )?.value ||
+        ""
+      )
+      .trim();
+
+
+    const groupId =
+      String(
+        document.getElementById(
+          "vGroup"
+        )?.value ||
+        ""
+      )
+      .trim();
+
+
+    const formId =
+      String(
+        document.getElementById(
+          "vForm"
+        )?.value ||
+        ""
+      )
+      .trim();
+
+
+    const maxUses =
+      Number(
+        document.getElementById(
+          "vMax"
+        )?.value ||
+        0
+      );
+
+
+    const startAt =
+      String(
+        document.getElementById(
+          "vStart"
+        )?.value ||
+        ""
+      )
+      .trim();
+
+
+    const endAt =
+      String(
+        document.getElementById(
+          "vEnd"
+        )?.value ||
+        ""
+      )
+      .trim();
+
+
+    if (
+      !campaignId ||
+      !groupId ||
+      !formId ||
+      !maxUses ||
+      !startAt ||
+      !endAt
+    ) {
+
+      alert(
+        t().required
+      );
+
+      return;
+
     }
-  });
 
-  observer.observe(document.body,{childList:true,subtree:true});
 
-  document.addEventListener("DOMContentLoaded",()=>{
-    setTimeout(()=>{
-      inject();
-      load();
-    },100);
-  });
+    if (
+      maxUses < 1
+    ) {
+
+      alert(
+        "Maksimum katılım en az 1 olmalıdır."
+      );
+
+      return;
+
+    }
+
+
+    const startDate =
+      new Date(
+        startAt
+      );
+
+
+    const endDate =
+      new Date(
+        endAt
+      );
+
+
+    if (
+      Number.isNaN(
+        startDate.getTime()
+      ) ||
+      Number.isNaN(
+        endDate.getTime()
+      )
+    ) {
+
+      alert(
+        "Geçersiz tarih."
+      );
+
+      return;
+
+    }
+
+
+    if (
+      endDate <=
+      startDate
+    ) {
+
+      alert(
+        "Bitiş tarihi başlangıç tarihinden sonra olmalıdır."
+      );
+
+      return;
+
+    }
+
+
+    const button =
+      document.getElementById(
+        "vCreate"
+      );
+
+
+    if (button) {
+
+      button.disabled =
+        true;
+
+    }
+
+
+    try {
+
+      const result =
+        await post({
+
+          action:
+            "createApplicationLink",
+
+          campaign_id:
+            campaignId,
+
+          group_id:
+            groupId,
+
+          form_id:
+            formId,
+
+          max_uses:
+            maxUses,
+
+          start_at:
+            startAt,
+
+          end_at:
+            endAt,
+
+          created_by:
+            "HR"
+
+        });
+
+
+      const url =
+        linkUrl(
+          result
+        );
+
+
+      const resultBox =
+        document.getElementById(
+          "vResult"
+        );
+
+
+      if (resultBox) {
+
+        resultBox.innerHTML =
+          `
+
+          <div
+            class="vnext-result"
+          >
+
+            <div>
+
+              <strong>
+                ${t().success}
+              </strong>
+
+            </div>
+
+
+            <div
+              class="vnext-code"
+            >
+              ${esc(
+                result.application_code ||
+                ""
+              )}
+            </div>
+
+
+            <div
+              class="vnext-url"
+            >
+              ${esc(url)}
+            </div>
+
+
+            <button
+              type="button"
+              class="secondary"
+              id="copyGenerated"
+            >
+              ${t().copy}
+            </button>
+
+          </div>
+
+          `;
+
+
+        const copyButton =
+          document.getElementById(
+            "copyGenerated"
+          );
+
+
+        if (copyButton) {
+
+          copyButton.onclick =
+            async function () {
+
+              await copyText(
+                url
+              );
+
+
+              copyButton.textContent =
+                t().copied;
+
+
+              setTimeout(
+                function () {
+
+                  copyButton.textContent =
+                    t().copy;
+
+                },
+                1500
+              );
+
+            };
+
+        }
+
+      }
+
+
+      clearCreateForm();
+
+
+      await load();
+
+    }
+
+    catch (error) {
+
+      const resultBox =
+        document.getElementById(
+          "vResult"
+        );
+
+
+      if (resultBox) {
+
+        resultBox.innerHTML =
+          `
+          <div
+            class="vnext-error"
+          >
+            ${esc(
+              error.message
+            )}
+          </div>
+          `;
+
+      }
+
+      else {
+
+        alert(
+          error.message
+        );
+
+      }
+
+    }
+
+    finally {
+
+      if (button) {
+
+        button.disabled =
+          false;
+
+      }
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // GRUP ADI
+  // ==========================================================
+
+  function groupName(id) {
+
+    const item =
+      options.groups.find(
+        x =>
+          String(x.id) ===
+          String(id)
+      );
+
+
+    return (
+      item?.name ||
+      id ||
+      "—"
+    );
+
+  }
+
+
+  // ==========================================================
+  // FORM ADI
+  // ==========================================================
+
+  function formName(id) {
+
+    const item =
+      options.forms.find(
+        x =>
+          String(x.id) ===
+          String(id)
+      );
+
+
+    return (
+      item?.name ||
+      id ||
+      "—"
+    );
+
+  }
+
+
+  // ==========================================================
+  // LİNKLERİ GÖSTER
+  // ==========================================================
+
+  function renderList() {
+
+    const box =
+      document.getElementById(
+        "vLinksList"
+      );
+
+
+    if (!box) {
+
+      return;
+
+    }
+
+
+    if (!links.length) {
+
+      box.innerHTML =
+        `
+        <div
+          class="empty"
+        >
+          ${t().noLinks}
+        </div>
+        `;
+
+      return;
+
+    }
+
+
+    box.innerHTML = `
+
+      <table
+        class="vnext-table"
+      >
+
+        <thead>
+
+          <tr>
+
+            <th>
+              ${t().code}
+            </th>
+
+            <th>
+              ${t().url}
+            </th>
+
+            <th>
+              ${t().group}
+            </th>
+
+            <th>
+              ${t().form}
+            </th>
+
+            <th>
+              ${t().used}
+            </th>
+
+            <th>
+              ${t().remaining}
+            </th>
+
+            <th>
+              ${t().start}
+            </th>
+
+            <th>
+              ${t().end}
+            </th>
+
+            <th>
+              Durum
+            </th>
+
+            <th>
+              İşlem
+            </th>
+
+          </tr>
+
+        </thead>
+
+
+        <tbody>
+
+          ${
+            links
+              .map(
+                link => {
+
+                  const url =
+                    linkUrl(
+                      link
+                    );
+
+
+                  const used =
+                    Number(
+                      link.used_count ||
+                      0
+                    );
+
+
+                  const max =
+                    Number(
+                      link.max_uses ||
+                      0
+                    );
+
+
+                  const remaining =
+                    Math.max(
+                      0,
+                      max - used
+                    );
+
+
+                  const active =
+                    String(
+                      link.status ||
+                      ""
+                    )
+                    .toUpperCase() ===
+                    "ACTIVE";
+
+
+                  return `
+
+                    <tr>
+
+                      <td>
+
+                        <strong>
+                          ${esc(
+                            link.application_code ||
+                            ""
+                          )}
+                        </strong>
+
+                      </td>
+
+
+                      <td>
+
+                        <div
+                          style="
+                            max-width:280px;
+                            overflow:hidden;
+                            text-overflow:ellipsis;
+                            white-space:nowrap;
+                          "
+                          title="${esc(url)}"
+                        >
+                          ${esc(url)}
+                        </div>
+
+                      </td>
+
+
+                      <td>
+                        ${esc(
+                          groupName(
+                            link.group_id
+                          )
+                        )}
+                      </td>
+
+
+                      <td>
+                        ${esc(
+                          formName(
+                            link.form_id
+                          )
+                        )}
+                      </td>
+
+
+                      <td>
+                        ${used}/${max}
+                      </td>
+
+
+                      <td>
+                        ${remaining}
+                      </td>
+
+
+                      <td>
+                        ${formatDate(
+                          link.start_at
+                        )}
+                      </td>
+
+
+                      <td>
+                        ${formatDate(
+                          link.end_at
+                        )}
+                      </td>
+
+
+                      <td>
+
+                        ${
+                          active
+
+                            ?
+
+                            `<span class="pill ok">
+                              ${t().active}
+                            </span>`
+
+                            :
+
+                            `<span class="pill warn">
+                              ${t().inactive}
+                            </span>`
+                        }
+
+                      </td>
+
+
+                      <td>
+
+                        <div
+                          style="
+                            display:flex;
+                            gap:6px;
+                            flex-wrap:wrap;
+                          "
+                        >
+
+                          <button
+                            type="button"
+                            class="secondary link-copy"
+                            data-id="${esc(
+                              link.application_link_id
+                            )}"
+                          >
+                            ${t().copy}
+                          </button>
+
+
+                          <button
+                            type="button"
+                            class="secondary link-edit"
+                            data-id="${esc(
+                              link.application_link_id
+                            )}"
+                          >
+                            ${t().edit}
+                          </button>
+
+
+                          <button
+                            type="button"
+                            class="secondary link-toggle"
+                            data-id="${esc(
+                              link.application_link_id
+                            )}"
+                            data-status="${
+                              active
+                                ? "ACTIVE"
+                                : "INACTIVE"
+                            }"
+                          >
+                            ${
+                              active
+                                ? t().inactive
+                                : t().active
+                            }
+                          </button>
+
+                        </div>
+
+                      </td>
+
+                    </tr>
+
+                  `;
+
+                }
+              )
+              .join("")
+          }
+
+        </tbody>
+
+      </table>
+
+    `;
+
+
+    // --------------------------------------------------------
+    // KOPYALA
+    // --------------------------------------------------------
+
+    document
+      .querySelectorAll(
+        ".link-copy"
+      )
+      .forEach(
+        button => {
+
+          button.onclick =
+            async function () {
+
+              const link =
+                links.find(
+                  item =>
+                    String(
+                      item.application_link_id
+                    ) ===
+                    String(
+                      button.dataset.id
+                    )
+                );
+
+
+              if (!link) {
+
+                return;
+
+              }
+
+
+              await copyText(
+                linkUrl(link)
+              );
+
+
+              button.textContent =
+                t().copied;
+
+
+              setTimeout(
+                function () {
+
+                  button.textContent =
+                    t().copy;
+
+                },
+                1500
+              );
+
+            };
+
+        }
+      );
+
+
+    // --------------------------------------------------------
+    // DÜZENLE
+    // --------------------------------------------------------
+
+    document
+      .querySelectorAll(
+        ".link-edit"
+      )
+      .forEach(
+        button => {
+
+          button.onclick =
+            function () {
+
+              openEditLink(
+                button.dataset.id
+              );
+
+            };
+
+        }
+      );
+
+
+    // --------------------------------------------------------
+    // AKTİF / PASİF
+    // --------------------------------------------------------
+
+    document
+      .querySelectorAll(
+        ".link-toggle"
+      )
+      .forEach(
+        button => {
+
+          button.onclick =
+            function () {
+
+              toggleLink(
+                button.dataset.id,
+                button.dataset.status
+              );
+
+            };
+
+        }
+      );
+
+  }
+
+
+  // ==========================================================
+  // MODAL
+  // ==========================================================
+
+  function modal() {
+
+    let modal =
+      document.getElementById(
+        "linkEditModal"
+      );
+
+
+    if (modal) {
+
+      return modal;
+
+    }
+
+
+    modal =
+      document.createElement(
+        "div"
+      );
+
+
+    modal.id =
+      "linkEditModal";
+
+
+    modal.style.cssText = `
+
+      position:fixed;
+
+      inset:0;
+
+      background:
+        rgba(15,23,42,.45);
+
+      display:none;
+
+      align-items:center;
+
+      justify-content:center;
+
+      padding:20px;
+
+      z-index:9999;
+
+    `;
+
+
+    modal.innerHTML = `
+
+      <div
+        style="
+          width:min(560px,100%);
+          background:#fff;
+          border-radius:16px;
+          padding:24px;
+          box-shadow:0 25px 70px rgba(0,0,0,.2);
+        "
+      >
+
+        <div
+          style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+          "
+        >
+
+          <h3
+            style="margin:0"
+          >
+            ${t().editTitle}
+          </h3>
+
+
+          <button
+            type="button"
+            class="secondary"
+            id="linkModalClose"
+          >
+            ×
+          </button>
+
+        </div>
+
+
+        <div
+          id="linkModalBody"
+          style="margin-top:18px"
+        ></div>
+
+      </div>
+
+    `;
+
+
+    document.body.appendChild(
+      modal
+    );
+
+
+    modal
+      .querySelector(
+        "#linkModalClose"
+      )
+      .onclick =
+        function () {
+
+          modal.style.display =
+            "none";
+
+        };
+
+
+    return modal;
+
+  }
+
+
+  // ==========================================================
+  // LINK DÜZENLE
+  // ==========================================================
+
+  function openEditLink(id) {
+
+    const link =
+      links.find(
+        item =>
+          String(
+            item.application_link_id
+          ) ===
+          String(id)
+      );
+
+
+    if (!link) {
+
+      return;
+
+    }
+
+
+    const editModal =
+      modal();
+
+
+    const body =
+      editModal.querySelector(
+        "#linkModalBody"
+      );
+
+
+    body.innerHTML = `
+
+      <div
+        style="
+          display:grid;
+          gap:12px;
+        "
+      >
+
+        <div>
+
+          <strong>
+            ${esc(
+              link.application_code ||
+              ""
+            )}
+          </strong>
+
+
+          <div
+            style="
+              font-size:12px;
+              color:#64748b;
+              margin-top:4px;
+              word-break:break-all;
+            "
+          >
+            ${esc(
+              linkUrl(link)
+            )}
+          </div>
+
+        </div>
+
+
+        <label>
+
+          ${t().max}
+
+          <input
+            id="editMax"
+            type="number"
+            min="1"
+            value="${Number(
+              link.max_uses ||
+              1
+            )}"
+            style="
+              width:100%;
+              padding:10px;
+              border:1px solid #cbd5e1;
+              border-radius:9px;
+            "
+          >
+
+        </label>
+
+
+        <label>
+
+          ${t().start}
+
+          <input
+            id="editStart"
+            type="datetime-local"
+            value="${toDateTimeLocal(
+              link.start_at
+            )}"
+            style="
+              width:100%;
+              padding:10px;
+              border:1px solid #cbd5e1;
+              border-radius:9px;
+            "
+          >
+
+        </label>
+
+
+        <label>
+
+          ${t().end}
+
+          <input
+            id="editEnd"
+            type="datetime-local"
+            value="${toDateTimeLocal(
+              link.end_at
+            )}"
+            style="
+              width:100%;
+              padding:10px;
+              border:1px solid #cbd5e1;
+              border-radius:9px;
+            "
+          >
+
+        </label>
+
+
+        <div
+          style="
+            display:flex;
+            justify-content:flex-end;
+            gap:8px;
+          "
+        >
+
+          <button
+            type="button"
+            class="secondary"
+            id="editCancel"
+          >
+            ${t().cancel}
+          </button>
+
+
+          <button
+            type="button"
+            class="primary"
+            id="editSave"
+          >
+            ${t().saveChanges}
+          </button>
+
+        </div>
+
+      </div>
+
+    `;
+
+
+    body
+      .querySelector(
+        "#editCancel"
+      )
+      .onclick =
+        function () {
+
+          editModal.style.display =
+            "none";
+
+        };
+
+
+    body
+      .querySelector(
+        "#editSave"
+      )
+      .onclick =
+        async function () {
+
+          const maxUses =
+            Number(
+              body
+                .querySelector(
+                  "#editMax"
+                )
+                .value ||
+              0
+            );
+
+
+          const startAt =
+            body
+              .querySelector(
+                "#editStart"
+              )
+              .value;
+
+
+          const endAt =
+            body
+              .querySelector(
+                "#editEnd"
+              )
+              .value;
+
+
+          if (
+            !maxUses ||
+            !startAt ||
+            !endAt
+          ) {
+
+            alert(
+              t().required
+            );
+
+            return;
+
+          }
+
+
+          const startDate =
+            new Date(
+              startAt
+            );
+
+
+          const endDate =
+            new Date(
+              endAt
+            );
+
+
+          if (
+            endDate <=
+            startDate
+          ) {
+
+            alert(
+              "Bitiş tarihi başlangıç tarihinden sonra olmalıdır."
+            );
+
+            return;
+
+          }
+
+
+          const saveButton =
+            body.querySelector(
+              "#editSave"
+            );
+
+
+          saveButton.disabled =
+            true;
+
+
+          try {
+
+            await post({
+
+              action:
+                "updateApplicationLink",
+
+              application_link_id:
+                id,
+
+              max_uses:
+                maxUses,
+
+              start_at:
+                startAt,
+
+              end_at:
+                endAt
+
+            });
+
+
+            editModal.style.display =
+              "none";
+
+
+            await load();
+
+          }
+
+          catch (error) {
+
+            alert(
+              error.message
+            );
+
+          }
+
+          finally {
+
+            saveButton.disabled =
+              false;
+
+          }
+
+        };
+
+
+    editModal.style.display =
+      "flex";
+
+  }
+
+
+  // ==========================================================
+  // LINK AKTİF / PASİF
+  // ==========================================================
+
+  async function toggleLink(
+    id,
+    currentStatus
+  ) {
+
+    const newStatus =
+      String(
+        currentStatus
+      )
+      .toUpperCase() ===
+      "ACTIVE"
+
+        ?
+
+        "INACTIVE"
+
+        :
+
+        "ACTIVE";
+
+
+    const message =
+      newStatus ===
+      "ACTIVE"
+
+        ?
+
+        t().confirmActive
+
+        :
+
+        t().confirmInactive;
+
+
+    if (
+      !confirm(
+        message
+      )
+    ) {
+
+      return;
+
+    }
+
+
+    try {
+
+      await post({
+
+        action:
+          "setApplicationLinkStatus",
+
+        application_link_id:
+          id,
+
+        status:
+          newStatus
+
+      });
+
+
+      await load();
+
+    }
+
+    catch (error) {
+
+      alert(
+        error.message
+      );
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // SAYFA DEĞİŞİNCE YENİDEN BAĞLA
+  // ==========================================================
+
+  const observer =
+    new MutationObserver(
+      function () {
+
+        const page =
+          document.getElementById(
+            "links"
+          );
+
+
+        const root =
+          document.getElementById(
+            "vnextLinksRoot"
+          );
+
+
+        if (
+          page &&
+          !root
+        ) {
+
+          inject();
+
+        }
+
+      }
+    );
+
+
+  observer.observe(
+    document.body,
+    {
+
+      childList:
+        true,
+
+      subtree:
+        true
+
+    }
+  );
+
+
+  // ==========================================================
+  // İLK ÇALIŞMA
+  // ==========================================================
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+      setTimeout(
+        inject,
+        100
+      );
+
+    }
+  );
+
+
 })();
