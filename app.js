@@ -164,109 +164,42 @@ async function checkManageLink(){
 
 // --------------------------------------------------
 // PERSONEL YÖNETİM EKRANI
+// Eski belgeler kullanıcıya gösterilmez.
+// Yeni belge yüklenirse backend V1/V2/V3... olarak saklar.
 // --------------------------------------------------
 
-function renderManagePage(
-  personnel,
-  documents
-){
+function renderManagePage(personnel, documents){
 
-  const view =
-    document.getElementById("formView");
+  const view = document.getElementById("formView");
 
   view.classList.remove("hidden");
 
-  const documentRows =
-    documents.length
-      ? documents.map(doc => {
-
-          const name =
-            doc.file_name ||
-            doc.filename ||
-            doc.name ||
-            "Belge";
-
-          const code =
-            doc.document_code ||
-            doc.code ||
-            "";
-
-          const url =
-            doc.file_url ||
-            doc.drive_url ||
-            doc.url ||
-            "";
-
-          return `
-            <div style="
-              display:flex;
-              justify-content:space-between;
-              align-items:center;
-              gap:15px;
-              padding:14px;
-              margin-bottom:10px;
-              border:1px solid #e5e7eb;
-              border-radius:10px;
-              background:#f9fafb;
-            ">
-
-              <div>
-
-                <strong>
-                  ${esc(code)}
-                </strong>
-
-                <div style="
-                  margin-top:4px;
-                  color:#6b7280;
-                  font-size:13px;
-                ">
-                  ${esc(name)}
-                </div>
-
-              </div>
-
-              ${
-                url
-                  ? `
-                    <a
-                      href="${esc(url)}"
-                      target="_blank"
-                      class="primary"
-                      style="
-                        text-decoration:none;
-                        padding:9px 14px;
-                        border-radius:8px;
-                      "
-                    >
-                      Belgeyi Aç
-                    </a>
-                  `
-                  : `
-                    <span style="
-                      color:#16a34a;
-                      font-weight:600;
-                    ">
-                      Yüklendi
-                    </span>
-                  `
-              }
-
-            </div>
-          `;
-
-        }).join("")
-      : `
-          <div style="
-            padding:20px;
-            background:#fef3c7;
-            border-radius:10px;
-            color:#92400e;
-          ">
-            Henüz yüklenmiş belge bulunmuyor.
-          </div>
-        `;
-
+  const documentTypes = [
+    {
+      code: "KIMLIK",
+      label: "Kimlik Belgesi",
+      accept: "image/*,application/pdf",
+      maxMB: 10
+    },
+    {
+      code: "PASAPORT",
+      label: "Pasaport",
+      accept: "application/pdf,image/*",
+      maxMB: 10
+    },
+    {
+      code: "MYK",
+      label: "MYK Belgesi",
+      accept: "application/pdf,image/*",
+      maxMB: 10
+    },
+    {
+      code: "FOTOGRAF",
+      label: "Vesikalık Fotoğraf",
+      accept: "image/*",
+      maxMB: 5
+    }
+  ];
 
   view.innerHTML = `
 
@@ -297,58 +230,48 @@ function renderManagePage(
           <div>
             <strong>Personel No</strong>
             <div>
-              ${esc(
-                personnel.personnel_id || ""
-              )}
+              ${esc(personnel.personnel_id || "")}
             </div>
           </div>
 
           <div>
             <strong>Ad</strong>
             <div>
-              ${esc(
-                personnel.first_name || ""
-              )}
+              ${esc(personnel.first_name || "")}
             </div>
           </div>
 
           <div>
             <strong>Soyad</strong>
             <div>
-              ${esc(
-                personnel.last_name || ""
-              )}
+              ${esc(personnel.last_name || "")}
             </div>
           </div>
 
           <div>
             <strong>T.C. Kimlik No</strong>
             <div>
-              ${esc(
-                personnel.national_id || ""
-              )}
+              ${esc(personnel.national_id || "")}
             </div>
           </div>
 
           <div>
             <strong>Telefon</strong>
             <div>
-              ${esc(
-                personnel.phone || ""
-              )}
+              ${esc(personnel.phone || "")}
             </div>
           </div>
 
           <div>
             <strong>Durum</strong>
+
             <div style="
               color:#16a34a;
               font-weight:600;
             ">
-              ${esc(
-                personnel.status || "ACTIVE"
-              )}
+              ${esc(personnel.status || "ACTIVE")}
             </div>
+
           </div>
 
         </div>
@@ -360,12 +283,102 @@ function renderManagePage(
         margin-top:30px;
         margin-bottom:15px;
       ">
-        Yüklenen Belgeler
+        Belge Güncelleme
       </h3>
 
 
-      <div>
-        ${documentRows}
+      <div style="
+        color:#6b7280;
+        font-size:14px;
+        margin-bottom:20px;
+      ">
+        Yeni belge yüklediğinizde mevcut belge silinmez.
+        Sistem yeni belgeyi otomatik olarak yeni bir versiyon
+        olarak kaydeder.
+      </div>
+
+
+      <div id="manageDocumentList">
+
+        ${documentTypes.map(doc => `
+
+          <div style="
+            padding:18px;
+            margin-bottom:12px;
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+            background:#f9fafb;
+          ">
+
+            <div style="
+              display:flex;
+              justify-content:space-between;
+              align-items:center;
+              gap:15px;
+              flex-wrap:wrap;
+            ">
+
+              <div>
+
+                <strong style="
+                  display:block;
+                  font-size:16px;
+                ">
+                  ${esc(doc.label)}
+                </strong>
+
+                <div style="
+                  margin-top:5px;
+                  color:#6b7280;
+                  font-size:13px;
+                ">
+                  Yeni belge yüklemek için dosyayı seçiniz.
+                </div>
+
+              </div>
+
+
+              <label
+                for="manageFile_${esc(doc.code)}"
+                class="primary"
+                style="
+                  display:inline-block;
+                  cursor:pointer;
+                  padding:10px 16px;
+                  border-radius:8px;
+                  color:#ffffff;
+                  background:#2563eb;
+                  text-decoration:none;
+                "
+              >
+                Yeni Belge Yükle
+              </label>
+
+              <input
+                id="manageFile_${esc(doc.code)}"
+                type="file"
+                accept="${esc(doc.accept)}"
+                style="display:none;"
+              >
+
+            </div>
+
+
+            <div
+              id="manageStatus_${esc(doc.code)}"
+              style="
+                margin-top:10px;
+                font-size:13px;
+                color:#6b7280;
+              "
+            >
+              Henüz yeni belge seçilmedi.
+            </div>
+
+          </div>
+
+        `).join("")}
+
       </div>
 
 
@@ -383,17 +396,140 @@ function renderManagePage(
 
         <div style="
           margin-top:6px;
+          line-height:1.5;
         ">
           Bu bağlantı size özel personel yönetim
-          bağlantınızdır. Bağlantıyı kaybetmemeniz
-          önerilir.
+          bağlantınızdır.
+          Eski belgeler sistemde saklanır ve silinmez.
+          Yeni yüklenen belgeler yeni versiyon olarak kaydedilir.
         </div>
 
       </div>
 
+
     </div>
 
   `;
+
+
+  // --------------------------------------------------
+  // DOSYA SEÇİMİ
+  // --------------------------------------------------
+
+  documentTypes.forEach(doc => {
+
+    const input =
+      document.getElementById(
+        "manageFile_" + doc.code
+      );
+
+    if(!input){
+      return;
+    }
+
+
+    input.addEventListener("change", async event => {
+
+      const file =
+        event.target.files[0];
+
+      if(!file){
+        return;
+      }
+
+
+      // Dosya boyutu
+      if(
+        file.size >
+        doc.maxMB * 1024 * 1024
+      ){
+
+        alert(
+          "Dosya " +
+          doc.maxMB +
+          " MB sınırını aşamaz."
+        );
+
+        event.target.value = "";
+
+        return;
+      }
+
+
+      const status =
+        document.getElementById(
+          "manageStatus_" + doc.code
+        );
+
+
+      if(status){
+
+        status.textContent =
+          "Belge yükleniyor...";
+
+        status.style.color =
+          "#2563eb";
+
+      }
+
+
+      try{
+
+        await uploadManageDocument(
+          personnel.personnel_id,
+          doc.code,
+          file
+        );
+
+
+        if(status){
+
+          status.textContent =
+            "Belge başarıyla yüklendi. Eski belge korunmuştur.";
+
+          status.style.color =
+            "#16a34a";
+
+        }
+
+
+        // Aynı dosyayı tekrar seçebilmek için
+        event.target.value = "";
+
+      }
+      catch(error){
+
+        console.error(
+          "Belge yükleme hatası:",
+          error
+        );
+
+
+        if(status){
+
+          status.textContent =
+            "Yükleme başarısız.";
+
+          status.style.color =
+            "#dc2626";
+
+        }
+
+
+        alert(
+          "Belge yüklenirken hata oluştu:\n\n" +
+          error.message
+        );
+
+        event.target.value = "";
+
+      }
+
+    });
+
+  });
+
+}
 
 }
 function renderForm(){
