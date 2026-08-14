@@ -16,6 +16,11 @@ function doPost(e) {
     if (action === 'getManage') return json_(getManage_(payload.token));
     if (action === 'replaceDocument') return json_(replaceDocument_(payload));
 
+    if (action === 'getApplicationLinkOptions') return json_(getApplicationLinkOptions_());
+    if (action === 'getApplicationLinks') return json_(getApplicationLinksForHR_());
+    if (action === 'createApplicationGroup') return json_(createApplicationGroup_(payload));
+    if (action === 'createApplicationLink') return json_(createApplicationLink_(payload));
+
     return json_({ok:false,error:'UNKNOWN_ACTION'});
   } catch (err) {
     return json_({ok:false,error:String(err),stack:err.stack});
