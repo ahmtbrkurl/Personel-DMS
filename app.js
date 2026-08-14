@@ -610,7 +610,6 @@ async function uploadManageDocument(
   return result;
 
 }
-}
 function renderForm(){
   document.getElementById("landing").classList.add("hidden");
   const view=document.getElementById("formView");
