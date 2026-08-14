@@ -254,8 +254,49 @@ $("newGroupBtn").onclick=()=>{
   showPage("groups");
 };
 
+function ensureFormBuilderDom(){
+  const formsPage = $("forms");
+  if(!formsPage) return false;
+
+  // Eski/eksik index.html sürümlerinde builder-top bulunmuyorsa
+  // form tasarımının temel alanlarını burada güvenli şekilde oluştur.
+  let top = formsPage.querySelector(".builder-top");
+  const builder = formsPage.querySelector(".builder");
+
+  if(!top && builder){
+    top = document.createElement("div");
+    top.className = "builder-top";
+    builder.parentNode.insertBefore(top, builder);
+  }
+
+  if(top){
+    if(!$("formGroup")) {
+      const label=document.createElement("label");
+      label.innerHTML='Grup<select id="formGroup"></select>';
+      top.appendChild(label);
+    }
+
+    if(!$("formName")) {
+      const label=document.createElement("label");
+      label.innerHTML='Form Adı<input id="formName" value="Personel Başvuru Formu">';
+      top.appendChild(label);
+    }
+
+    if(!$("formVersion")) {
+      const label=document.createElement("label");
+      label.innerHTML='Versiyon<input id="formVersion" value="1.0">';
+      top.appendChild(label);
+    }
+  }
+
+  return !!($("formGroup") && $("formName") && $("formVersion"));
+}
+
 function populateGroups(){
-  $("formGroup").innerHTML=
+  if(!ensureFormBuilderDom()) return;
+
+  const el=$("formGroup");
+  el.innerHTML=
     demo.groups.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join("");
 }
 
@@ -327,14 +368,24 @@ document.addEventListener("click",function(e){
 });
 
 function renderBuilder(){
+  if(!ensureFormBuilderDom()) {
+    console.error("FORM BUILDER: gerekli DOM elemanları bulunamadı.");
+    return;
+  }
+
   populateGroups();
 
-  $("canvasTitle").textContent=
-    $("formName").value || "Personel Başvuru Formu";
+  if($("canvasTitle")) {
+    $("canvasTitle").textContent=
+      $("formName").value || "Personel Başvuru Formu";
+  }
 
-  $("emptyFields").classList.toggle("hidden",demo.fields.length>0);
+  if($("emptyFields")) {
+    $("emptyFields").classList.toggle("hidden",demo.fields.length>0);
+  }
 
-  $("fieldList").innerHTML=demo.fields.map(f=>`
+  if($("fieldList")) {
+    $("fieldList").innerHTML=demo.fields.map(f=>`
     <div class="field-row ${selectedField===f.id?"selected":""}" data-id="${f.id}">
       <span>☰</span>
       <div class="field-main">
@@ -347,7 +398,8 @@ function renderBuilder(){
       </div>
       <button class="remove" data-remove="${f.id}">Sil</button>
     </div>
-  `).join("");
+    `).join("");
+  }
 
   renderProperties();
 }
@@ -564,6 +616,8 @@ function renderProperties(){
   };
 }
 
+ensureFormBuilderDom();
+
 if($("formName")){
   $("formName").oninput=()=>{
     if($("canvasTitle")){
@@ -573,9 +627,12 @@ if($("formName")){
   };
 }
 
-$("saveFormBtn").onclick=async()=>{
-  const formName=String($("formName").value||"").trim();
-  const groupId=String($("formGroup").value||"").trim();
+if($("saveFormBtn")) $("saveFormBtn").onclick=async()=>{
+  ensureFormBuilderDom();
+
+  const formName=String($("formName")?.value||"").trim();
+  const groupId=String($("formGroup")?.value||"").trim();
+  const version=String($("formVersion")?.value||"1.0").trim() || "1.0";
 
   if(!formName){
     alert("Form adı zorunludur.");
@@ -626,7 +683,7 @@ $("saveFormBtn").onclick=async()=>{
       action:"createForm",
       group_id:groupId,
       form_name:formName,
-      version:"1.0",
+      version:version,
       created_by:"HR",
       fields:fields
     });
