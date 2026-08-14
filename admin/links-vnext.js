@@ -1,185 +1,352 @@
-/* STS Personnel DMS - STEP 03
- * GITHUB -> admin/i18n-vnext.js
- * 3-language HR UI: Türkçe / Русский / English
+/* STS Personnel DMS - VNext STEP 02
+ * GitHub -> admin/links-vnext.js
+ * Application Link Management UI
  *
  * Google Apps Script'e dokunmaz.
- * links-vnext.js içindeki dil altyapısıyla birlikte çalışır.
+ * Backend API: Google Apps Script Web App.
  */
-(function () {
+(function(){
   "use strict";
 
-  const LANG_KEY = "sts_dms_lang";
-  let lang = localStorage.getItem(LANG_KEY) || "tr";
+  const API_URL = "https://script.google.com/macros/s/AKfycbwPMm6sjG_viMpjyW9zhNsGfDA9PKjckV47pvMplonGOqS-FNOnDxbl47EYF67Lmk4/exec";
+  const PAGE_URL = "https://ahmtbrkurl.github.io/Personel-DMS/";
+  let lang = localStorage.getItem("sts_dms_lang") || "tr";
+  let options = {groups:[],forms:[],campaigns:[]};
 
-  const D = {
-    tr: {
-      page: {
-        dashboard: "Dashboard", groups: "Personel Grupları", forms: "Form Tasarımı",
-        links: "Başvuru Linkleri", personnel: "Personeller", logs: "İşlem Logları", settings: "Ayarlar"
-      },
-      nav: { dashboard:"📊 Dashboard", groups:"👥 Gruplar", forms:"🧩 Form Tasarımı", links:"🔗 Başvuru Linkleri", personnel:"📄 Personeller", logs:"📋 İşlem Logları", settings:"⚙️ Ayarlar" },
-      login: { title:"HR Yönetim Paneli", desc:"Personel Belge Yönetim Sistemi", user:"Kullanıcı Adı", userPh:"HR kullanıcı adı", pass:"Şifre", passPh:"HR şifre", login:"Giriş Yap", note:"Kimlik doğrulaması sonraki aşamada Google Apps Script backend'e bağlanacaktır." },
-      dash: { total:"Toplam Personel", groups:"Aktif Gruplar", pending:"Bekleyen Belgeler", changes:"Değişiklik Talepleri", quick:"Hızlı İşlemler", quickDesc:"HR'ın günlük kullanacağı ana işlemler.", newGroup:"+ Yeni Grup", form:"+ Form Tasarla", link:"+ Başvuru Linki", people:"Personelleri Gör" },
-      groups: { desc:"Her grubun kendi belge ve form seti olabilir.", new:"+ Yeni Grup", th:["Grup","Açıklama","Personel","Belge","Durum"], active:"Aktif", prompt:"Grup adı:", newDesc:"Yeni personel grubu" },
-      forms: { desc:"Kod yazmadan alanları ve belgeleri tanımlayın.", group:"Grup", name:"Form Adı", version:"Versiyon", defaultName:"Personel Başvuru Formu", add:"Alan Ekle", fields:"Alanlar", empty:"Sol taraftan alan ekleyin.", properties:"Alan Özellikleri", selectField:"Düzenlemek için bir alan seçin.", preview:"Önizleme", save:"Formu Kaydet", type:"Alan Tipi", label:"Etiket", help:"Yardım / Açıklama Metni", placeholder:"Yer Tutucu Metin", required:"Zorunlu alan", remove:"Sil", replace:"Personel sonradan değiştirebilir", approval:"Değişiklikte HR onayı gerekli", camera:"Kameradan çekmeye izin ver", gallery:"Galeriden/dosyadan seçmeye izin ver", options:"Seçenekler", fileTypes:"İzin Verilen Dosya Türleri", max:"Maksimum Dosya Boyutu (MB)", code:"Belge Kodu" },
-      links: { desc:"Ekiplere göndermek için grup bazlı bağlantılar oluşturun.", new:"+ Yeni Link" },
-      personnel: { desc:"Başvuruları, belge durumlarını ve kayıt numaralarını görüntüleyin.", empty:"Backend bağlantısından sonra gerçek personel kayıtları burada gösterilecek." },
-      logs: { desc:"Belge yükleme, değiştirme ve onay hareketleri.", empty:"Backend bağlantısından sonra gerçek DOCUMENT_LOG kayıtları burada listelenecek." },
-      settings: { desc:"Backend bağlantısı ve genel sistem seçenekleri.", status:"Backend durumu", warn:" Henüz bağlanmadı ", note:"Bir sonraki aşamada Google Apps Script Web App URL'si bağlanacak." },
-      alerts: { login:"Kullanıcı adı ve şifre girin.", addField:"Önce en az bir alan ekleyin." }
+  const T={
+    tr:{
+      title:"Başvuru Linkleri",desc:"HR tarafından oluşturulan başvuru kampanyalarını ve linklerini yönetin.",
+      newCampaign:"Yeni Kampanya",createLink:"Başvuru Linki Oluştur",campaign:"Kampanya",group:"Personel Grubu",
+      form:"Form",max:"Maksimum Katılım",start:"Başlangıç",end:"Bitiş",campaignName:"Kampanya Adı",
+      month:"Kampanya Ayı",description:"Açıklama",save:"Kampanyayı Oluştur",cancel:"Temizle",active:"Aktif",
+      inactive:"Pasif",used:"Kullanım",remaining:"Kalan",code:"Başvuru Kodu",url:"Başvuru Linki",
+      copy:"Linki Kopyala",copied:"Kopyalandı",noLinks:"Henüz başvuru linki oluşturulmadı.",
+      noOptions:"Önce grup ve form tanımlarının bulunması gerekir.",success:"Başvuru linki oluşturuldu.",
+      campaignSuccess:"Kampanya oluşturuldu.",required:"Zorunlu alanları doldurun.",error:"İşlem başarısız."
     },
-    ru: {
-      page: { dashboard:"Панель управления", groups:"Группы персонала", forms:"Конструктор форм", links:"Ссылки на заявки", personnel:"Персонал", logs:"Журнал операций", settings:"Настройки" },
-      nav: { dashboard:"📊 Панель", groups:"👥 Группы", forms:"🧩 Конструктор форм", links:"🔗 Ссылки на заявки", personnel:"📄 Персонал", logs:"📋 Журнал операций", settings:"⚙️ Настройки" },
-      login: { title:"Панель управления HR", desc:"Система управления документами персонала", user:"Имя пользователя", userPh:"Имя пользователя HR", pass:"Пароль", passPh:"Пароль HR", login:"Войти", note:"На следующем этапе аутентификация будет подключена к Google Apps Script." },
-      dash: { total:"Всего персонала", groups:"Активные группы", pending:"Ожидающие документы", changes:"Запросы на изменения", quick:"Быстрые действия", quickDesc:"Основные ежедневные действия HR.", newGroup:"+ Новая группа", form:"+ Создать форму", link:"+ Ссылка на заявку", people:"Просмотреть персонал" },
-      groups: { desc:"Каждая группа может иметь собственный набор документов и форм.", new:"+ Новая группа", th:["Группа","Описание","Персонал","Документы","Статус"], active:"Активна", prompt:"Название группы:", newDesc:"Новая группа персонала" },
-      forms: { desc:"Определяйте поля и документы без написания кода.", group:"Группа", name:"Название формы", version:"Версия", defaultName:"Форма заявки персонала", add:"Добавить поле", fields:"Поля", empty:"Добавьте поле слева.", properties:"Свойства поля", selectField:"Выберите поле для редактирования.", preview:"Предпросмотр", save:"Сохранить форму", type:"Тип поля", label:"Метка", help:"Текст помощи / описания", placeholder:"Текст-подсказка", required:"Обязательное поле", remove:"Удалить", replace:"Персонал может изменить позже", approval:"Для изменения требуется одобрение HR", camera:"Разрешить съёмку камерой", gallery:"Разрешить выбор из галереи/файла", options:"Варианты", fileTypes:"Разрешённые типы файлов", max:"Максимальный размер файла (МБ)", code:"Код документа" },
-      links: { desc:"Создавайте групповые ссылки для отправки командам.", new:"+ Новая ссылка" },
-      personnel: { desc:"Просматривайте заявки, статусы документов и регистрационные номера.", empty:"Реальные записи персонала будут показаны после подключения backend." },
-      logs: { desc:"Загрузка, замена и операции утверждения документов.", empty:"Реальные записи DOCUMENT_LOG будут показаны после подключения backend." },
-      settings: { desc:"Подключение backend и общие настройки системы.", status:"Состояние backend", warn:" Ещё не подключён ", note:"На следующем этапе будет подключён URL Google Apps Script Web App." },
-      alerts: { login:"Введите имя пользователя и пароль.", addField:"Сначала добавьте хотя бы одно поле." }
+    ru:{
+      title:"Ссылки на заявки",desc:"Управляйте кампаниями и ссылками на заявки, созданными HR.",
+      newCampaign:"Новая кампания",createLink:"Создать ссылку",campaign:"Кампания",group:"Группа персонала",
+      form:"Форма",max:"Максимум участников",start:"Начало",end:"Окончание",campaignName:"Название кампании",
+      month:"Месяц кампании",description:"Описание",save:"Создать кампанию",cancel:"Очистить",active:"Активна",
+      inactive:"Неактивна",used:"Использовано",remaining:"Осталось",code:"Код заявки",url:"Ссылка",
+      copy:"Копировать",copied:"Скопировано",noLinks:"Ссылки на заявки пока не созданы.",
+      noOptions:"Сначала должны быть доступны группы и формы.",success:"Ссылка создана.",
+      campaignSuccess:"Кампания создана.",required:"Заполните обязательные поля.",error:"Операция не выполнена."
     },
-    en: {
-      page: { dashboard:"Dashboard", groups:"Personnel Groups", forms:"Form Designer", links:"Application Links", personnel:"Personnel", logs:"Activity Logs", settings:"Settings" },
-      nav: { dashboard:"📊 Dashboard", groups:"👥 Groups", forms:"🧩 Form Designer", links:"🔗 Application Links", personnel:"📄 Personnel", logs:"📋 Activity Logs", settings:"⚙️ Settings" },
-      login: { title:"HR Administration", desc:"Personnel Document Management System", user:"Username", userPh:"HR username", pass:"Password", passPh:"HR password", login:"Sign In", note:"Authentication will be connected to the Google Apps Script backend in a later stage." },
-      dash: { total:"Total Personnel", groups:"Active Groups", pending:"Pending Documents", changes:"Change Requests", quick:"Quick Actions", quickDesc:"Main daily actions for HR.", newGroup:"+ New Group", form:"+ Design Form", link:"+ Application Link", people:"View Personnel" },
-      groups: { desc:"Each group can have its own document and form set.", new:"+ New Group", th:["Group","Description","Personnel","Documents","Status"], active:"Active", prompt:"Group name:", newDesc:"New personnel group" },
-      forms: { desc:"Define fields and documents without writing code.", group:"Group", name:"Form Name", version:"Version", defaultName:"Personnel Application Form", add:"Add Field", fields:"Fields", empty:"Add a field from the left.", properties:"Field Properties", selectField:"Select a field to edit.", preview:"Preview", save:"Save Form", type:"Field Type", label:"Label", help:"Help / Description Text", placeholder:"Placeholder Text", required:"Required field", remove:"Delete", replace:"Personnel can change later", approval:"HR approval required for changes", camera:"Allow camera capture", gallery:"Allow gallery/file selection", options:"Options", fileTypes:"Allowed File Types", max:"Maximum File Size (MB)", code:"Document Code" },
-      links: { desc:"Create group-based links to send to teams.", new:"+ New Link" },
-      personnel: { desc:"View applications, document statuses and registration numbers.", empty:"Real personnel records will appear here after the backend is connected." },
-      logs: { desc:"Document uploads, replacements and approval actions.", empty:"Real DOCUMENT_LOG records will appear here after the backend is connected." },
-      settings: { desc:"Backend connection and general system options.", status:"Backend status", warn:" Not connected yet ", note:"The Google Apps Script Web App URL will be connected in the next stage." },
-      alerts: { login:"Enter a username and password.", addField:"Add at least one field first." }
+    en:{
+      title:"Application Links",desc:"Manage application campaigns and links created by HR.",
+      newCampaign:"New Campaign",createLink:"Create Application Link",campaign:"Campaign",group:"Personnel Group",
+      form:"Form",max:"Maximum Participants",start:"Start",end:"End",campaignName:"Campaign Name",
+      month:"Campaign Month",description:"Description",save:"Create Campaign",cancel:"Clear",active:"Active",
+      inactive:"Inactive",used:"Used",remaining:"Remaining",code:"Application Code",url:"Application Link",
+      copy:"Copy Link",copied:"Copied",noLinks:"No application links have been created yet.",
+      noOptions:"Groups and forms must be available first.",success:"Application link created.",
+      campaignSuccess:"Campaign created.",required:"Please fill in the required fields.",error:"Operation failed."
     }
   };
 
-  function T() { return D[lang] || D.tr; }
-  function text(el, value) { if (el) el.textContent = value; }
-  function attr(id, name, value) { const el=document.getElementById(id); if(el) el.setAttribute(name,value); }
+  const t=()=>T[lang]||T.tr;
+  const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 
-  function installStyle() {
-    if (document.getElementById("stsI18nStyle")) return;
-    const s=document.createElement("style");
-    s.id="stsI18nStyle";
-    s.textContent=".sts-global-lang,.sts-login-lang{display:flex;gap:4px}.sts-global-lang button,.sts-login-lang button{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:7px;padding:5px 8px;cursor:pointer;font-size:11px;font-weight:700}.sts-global-lang button.active,.sts-login-lang button.active{background:#2563eb;color:#fff;border-color:#2563eb}.sts-login-lang{justify-content:center;margin:12px 0 16px}";
-    document.head.appendChild(s);
-  }
-
-  function translateStatic() {
-    const t=T();
-
-    document.documentElement.lang=lang;
-
-    document.querySelectorAll(".nav-item").forEach(b => {
-      const key=b.dataset.page;
-      if (t.nav[key]) text(b,t.nav[key]);
+  const post=async data=>{
+    const r=await fetch(API_URL,{
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify(data)
     });
+    const text=await r.text();
+    let x;
+    try{x=JSON.parse(text)}catch(e){throw new Error(text)}
+    if(!x.success)throw new Error(x.error||t().error);
+    return x;
+  };
 
-    text(document.querySelector("#loginView h1"),t.login.title);
-    text(document.querySelector("#loginView p"),t.login.desc);
-    const labels=document.querySelectorAll("#loginView label");
-    if(labels[0]) text(labels[0],t.login.user);
-    if(labels[1]) text(labels[1],t.login.pass);
-    attr("username","placeholder",t.login.userPh);
-    attr("password","placeholder",t.login.passPh);
-    text(document.getElementById("loginBtn"),t.login.login);
-    text(document.querySelector(".demo-note"),t.login.note);
+  function inject(){
+    const page=document.getElementById("links");
+    if(!page||document.getElementById("vnextLinksRoot"))return;
 
-    text(document.querySelector("#dashboard .stat:nth-child(1) span"),t.dash.total);
-    text(document.querySelector("#dashboard .stat:nth-child(2) span"),t.dash.groups);
-    text(document.querySelector("#dashboard .stat:nth-child(3) span"),t.dash.pending);
-    text(document.querySelector("#dashboard .stat:nth-child(4) span"),t.dash.changes);
-    text(document.querySelector("#dashboard .panel h3"),t.dash.quick);
-    text(document.querySelector("#dashboard .panel p"),t.dash.quickDesc);
-    const quick=document.querySelectorAll("#dashboard .quick");
-    if(quick[0]) text(quick[0],t.dash.newGroup);
-    if(quick[1]) text(quick[1],t.dash.form);
-    if(quick[2]) text(quick[2],t.dash.link);
-    if(quick[3]) text(quick[3],t.dash.people);
-
-    const g=document.querySelector("#groups");
-    if(g){ text(g.querySelector(".panel-head p"),t.groups.desc); text(g.querySelector("#newGroupBtn"),t.groups.new); translateGroupsTable(); }
-
-    const f=document.querySelector("#forms");
-    if(f){ text(f.querySelector(".panel-head p"),t.forms.desc); text(f.querySelector(".builder-top label:nth-child(1)"),t.forms.group); text(f.querySelector(".builder-top label:nth-child(2)"),t.forms.name); text(f.querySelector(".builder-top label:nth-child(3)"),t.forms.version); attr("formName","value",t.forms.defaultName); text(f.querySelector(".palette h4"),t.forms.add); text(f.querySelector(".canvas-head span"),t.forms.fields); text(f.querySelector("#emptyFields"),t.forms.empty); text(f.querySelector(".properties h4"),t.forms.properties); text(f.querySelector("#previewBtn"),t.forms.preview); text(f.querySelector("#saveFormBtn"),t.forms.save); translateFormDynamic(); }
-
-    const l=document.querySelector("#links");
-    if(l){ text(l.querySelector(".panel-head p"),t.links.desc); text(l.querySelector("#newLinkBtn"),t.links.new); }
-
-    const p=document.querySelector("#personnel");
-    if(p){ text(p.querySelector(".panel-head p"),t.personnel.desc); if(p.querySelector("#personnelTable .empty")) text(p.querySelector("#personnelTable .empty"),t.personnel.empty); }
-
-    const logs=document.querySelector("#logs");
-    if(logs){ text(logs.querySelector(".panel-head p"),t.logs.desc); if(logs.querySelector("#logsTable .empty")) text(logs.querySelector("#logsTable .empty"),t.logs.empty); }
-
-    const set=document.querySelector("#settings");
-    if(set){ text(set.querySelector(".panel-head p"),t.settings.desc); text(set.querySelector(".settings-box strong"),t.settings.status); text(set.querySelector(".settings-box .pill"),t.settings.warn); text(set.querySelector(".settings-box p"),t.settings.note); }
-
-    document.querySelectorAll(".sts-global-lang button,.sts-login-lang button").forEach(b=>b.classList.toggle("active",b.dataset.lang===lang));
-
-    // Keep the existing links-vnext language selector synchronized.
-    const localLinksButton=document.querySelector(".vnext-lang button[data-l='"+lang+"']");
-    if(localLinksButton && !localLinksButton.classList.contains("active")) localLinksButton.click();
+    const panel=page.querySelector(".panel");
+    panel.innerHTML=`
+      <div class="panel-head">
+        <div>
+          <h3 id="vnextTitle"></h3>
+          <p id="vnextDesc"></p>
+        </div>
+        <div class="vnext-lang">
+          <button data-l="tr">TR</button>
+          <button data-l="ru">RU</button>
+          <button data-l="en">EN</button>
+        </div>
+      </div>
+      <div id="vnextLinksRoot"></div>
+    `;
+    render();
   }
 
-  function translateGroupsTable(){
-    const tr=document.querySelectorAll("#groupsTable thead th");
-    if(tr.length===5) T().groups.th.forEach((x,i)=>text(tr[i],x));
-    document.querySelectorAll("#groupsTable .pill.ok").forEach(x=>text(x,T().groups.active));
-  }
+  function render(){
+    const root=document.getElementById("vnextLinksRoot");
+    if(!root)return;
 
-  function translateFormDynamic(){
-    const t=T();
-    document.querySelectorAll("#fieldList .field-row .remove").forEach(x=>text(x,t.forms.remove));
-    const body=document.getElementById("propertiesBody");
-    if(!body) return;
-    const empty=body.querySelector(".empty");
-    if(empty) { text(empty,t.forms.selectField); return; }
-    const labels=body.querySelectorAll(".property > label");
-    const map=[t.forms.type,t.forms.label,t.forms.help,t.forms.placeholder,t.forms.code,t.forms.fileTypes,t.forms.max,t.forms.replace,t.forms.approval,t.forms.camera,t.forms.gallery,t.forms.options];
-    labels.forEach((x,i)=>{ if(map[i]) text(x,map[i]); });
-    body.querySelectorAll(".check label").forEach(x=>{
-      const s=x.textContent.trim();
-      if(s==="Zorunlu alan"||s==="Required field"||s==="Обязательное поле") text(x,t.forms.required);
-      if(s.includes("sonradan değiştirebilir")||s.includes("can change later")||s.includes("может изменить")) text(x,t.forms.replace);
-      if(s.includes("HR onayı")||s.includes("HR approval")||s.includes("одобрение HR")) text(x,t.forms.approval);
-      if(s.includes("Kameradan")||s.includes("camera")||s.includes("камерой")) text(x,t.forms.camera);
-      if(s.includes("Galeriden")||s.includes("gallery")||s.includes("галереи")) text(x,t.forms.gallery);
-    });
+    document.getElementById("vnextTitle").textContent=t().title;
+    document.getElementById("vnextDesc").textContent=t().desc;
+
+    document.querySelectorAll("#links .vnext-lang button")
+      .forEach(b=>b.classList.toggle("active",b.dataset.l===lang));
+
+    root.innerHTML=`
+      <div class="vnext-link-tools">
+        <div class="vnext-box">
+          <h4>${t().createLink}</h4>
+          <div class="vnext-grid">
+            <label class="full">${t().campaign}
+              <select id="vCampaign">
+                <option value="">—</option>
+                ${options.campaigns.map(x=>`
+                  <option value="${esc(x.id)}">
+                    ${esc(x.name)}${x.month?" — "+esc(x.month):""}
+                  </option>`).join("")}
+              </select>
+            </label>
+
+            <label>${t().group}
+              <select id="vGroup">
+                <option value="">—</option>
+                ${options.groups.map(x=>`
+                  <option value="${esc(x.id)}">${esc(x.name)}</option>`).join("")}
+              </select>
+            </label>
+
+            <label>${t().form}
+              <select id="vForm">
+                <option value="">—</option>
+                ${options.forms.map(x=>`
+                  <option value="${esc(x.id)}">${esc(x.name)}</option>`).join("")}
+              </select>
+            </label>
+
+            <label>${t().max}
+              <input id="vMax" type="number" min="1" value="30">
+            </label>
+
+            <label>${t().start}
+              <input id="vStart" type="datetime-local">
+            </label>
+
+            <label>${t().end}
+              <input id="vEnd" type="datetime-local">
+            </label>
+          </div>
+
+          <div class="vnext-actions">
+            <button class="secondary" id="vReload">${t().cancel}</button>
+            <button class="primary" id="vCreate">${t().createLink}</button>
+          </div>
+          <div id="vResult"></div>
+        </div>
+
+        <div class="vnext-box">
+          <h4>${t().newCampaign}</h4>
+          <div class="vnext-grid">
+            <label class="full">${t().campaignName}
+              <input id="vCampaignName">
+            </label>
+            <label>${t().month}
+              <input id="vCampaignMonth" type="month">
+            </label>
+            <label>${t().description}
+              <input id="vCampaignDesc">
+            </label>
+          </div>
+
+          <div class="vnext-actions">
+            <button class="primary" id="vCampaignCreate">${t().save}</button>
+          </div>
+
+          <div class="vnext-muted">
+            Bir kampanya altında birden fazla başvuru linki oluşturabilirsiniz.
+            Her link ayrı kod ve ayrı Drive klasörü alır.
+          </div>
+        </div>
+      </div>
+
+      <div class="vnext-box">
+        <h4>${t().title}</h4>
+        <div id="vLinksList" class="vnext-table-wrap"></div>
+      </div>
+    `;
+
+    bind();
+    renderList();
   }
 
   function bind(){
-    document.querySelectorAll(".sts-global-lang button,.sts-login-lang button").forEach(b=>{
-      b.onclick=()=>{
-        lang=b.dataset.lang;
-        localStorage.setItem(LANG_KEY,lang);
-        translateStatic();
-      };
-    });
+    document.querySelectorAll("#links .vnext-lang button")
+      .forEach(b=>b.onclick=()=>{
+        lang=b.dataset.l;
+        localStorage.setItem("sts_dms_lang",lang);
+        render();
+      });
+
+    document.getElementById("vReload").onclick=load;
+    document.getElementById("vCampaignCreate").onclick=createCampaign;
+    document.getElementById("vCreate").onclick=createLink;
   }
 
-  installStyle();
-  bind();
+  async function load(){
+    try{
+      const x=await post({action:"getApplicationLinkOptions"});
+      options=x;
 
-  let translateTimer = null;
+      const y=await post({action:"getApplicationLinks"});
+      window.__stsLinks=y.links||[];
+
+      render();
+    }
+    catch(e){
+      const box=document.getElementById("vLinksList");
+      if(box)box.innerHTML=`<div class="vnext-error">${esc(e.message)}</div>`;
+    }
+  }
+
+  async function createCampaign(){
+    const name=document.getElementById("vCampaignName").value.trim();
+    const month=document.getElementById("vCampaignMonth").value;
+    const desc=document.getElementById("vCampaignDesc").value.trim();
+
+    if(!name||!month){
+      alert(t().required);
+      return;
+    }
+
+    try{
+      await post({
+        action:"createApplicationGroup",
+        campaign_name:name,
+        campaign_month:month,
+        description:desc,
+        created_by:"HR"
+      });
+
+      alert(t().campaignSuccess);
+      await load();
+    }
+    catch(e){
+      alert(e.message);
+    }
+  }
+
+  async function createLink(){
+    const campaign_id=document.getElementById("vCampaign").value;
+    const group_id=document.getElementById("vGroup").value;
+    const form_id=document.getElementById("vForm").value;
+    const max_uses=Number(document.getElementById("vMax").value||0);
+    const start_at=document.getElementById("vStart").value;
+    const end_at=document.getElementById("vEnd").value;
+
+    if(!campaign_id||!group_id||!form_id||!max_uses||!start_at||!end_at){
+      alert(t().required);
+      return;
+    }
+
+    try{
+      const x=await post({
+        action:"createApplicationLink",
+        campaign_id,
+        group_id,
+        form_id,
+        max_uses,
+        start_at,
+        end_at,
+        created_by:"HR"
+      });
+
+      document.getElementById("vResult").innerHTML=`
+        <div class="vnext-result">
+          <div><strong>${t().success}</strong></div>
+          <div class="vnext-code">${esc(x.application_code)}</div>
+          <div class="vnext-url">${esc(x.url)}</div>
+          <button class="secondary vnext-copy" id="copyGenerated">${t().copy}</button>
+        </div>
+      `;
+
+      document.getElementById("copyGenerated").onclick=async()=>{
+        await navigator.clipboard.writeText(x.url);
+        document.getElementById("copyGenerated").textContent=t().copied;
+      };
+
+      await load();
+    }
+    catch(e){
+      document.getElementById("vResult").innerHTML=
+        `<div class="vnext-error">${esc(e.message)}</div>`;
+    }
+  }
+
+  function renderList(){
+    const box=document.getElementById("vLinksList");
+    if(!box)return;
+
+    const links=window.__stsLinks||[];
+
+    if(!links.length){
+      box.innerHTML=`<div class="empty">${t().noLinks}</div>`;
+      return;
+    }
+
+    const groupName=id=>
+      (options.groups.find(x=>x.id===id)||{}).name||id;
+
+    box.innerHTML=`
+      <table class="vnext-table">
+        <thead>
+          <tr>
+            <th>${t().code}</th>
+            <th>${t().group}</th>
+            <th>${t().used}</th>
+            <th>${t().remaining}</th>
+            <th>${t().start}</th>
+            <th>${t().end}</th>
+            <th>${t().active}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${links.map(x=>`
+            <tr>
+              <td><strong>${esc(x.application_code)}</strong></td>
+              <td>${esc(groupName(x.group_id))}</td>
+              <td>${x.used_count}/${x.max_uses}</td>
+              <td>${Math.max(0,x.max_uses-x.used_count)}</td>
+              <td>${x.start_at?esc(new Date(x.start_at).toLocaleString()):"—"}</td>
+              <td>${x.end_at?esc(new Date(x.end_at).toLocaleString()):"—"}</td>
+              <td>
+                ${x.status==="ACTIVE"
+                  ?`<span class="pill ok">${t().active}</span>`
+                  :`<span class="pill warn">${t().inactive}</span>`}
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+  }
+
   const observer=new MutationObserver(()=>{
-    clearTimeout(translateTimer);
-    translateTimer=setTimeout(translateStatic,30);
+    if(
+      document.getElementById("links") &&
+      !document.getElementById("vnextLinksRoot")
+    ){
+      inject();
+      load();
+    }
   });
+
   observer.observe(document.body,{childList:true,subtree:true});
 
-  window.STSDMSLanguage={
-    get:()=>lang,
-    set:(v)=>{
-      if(!D[v]) return;
-      lang=v;
-      localStorage.setItem(LANG_KEY,v);
-      translateStatic();
-    }
-  };
-
-  setTimeout(translateStatic,50);
+  document.addEventListener("DOMContentLoaded",()=>{
+    setTimeout(()=>{
+      inject();
+      load();
+    },100);
+  });
 })();
