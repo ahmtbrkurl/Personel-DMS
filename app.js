@@ -530,7 +530,86 @@ function renderManagePage(personnel, documents){
   });
 
 }
+// --------------------------------------------------
+// YÖNETİM EKRANINDAN BELGE YÜKLE
+// --------------------------------------------------
 
+async function uploadManageDocument(
+  personnelId,
+  documentCode,
+  file
+){
+
+  if(!personnelId){
+    throw new Error(
+      "Personel numarası bulunamadı."
+    );
+  }
+
+
+  if(!documentCode){
+    throw new Error(
+      "Belge kodu bulunamadı."
+    );
+  }
+
+
+  if(!file){
+    throw new Error(
+      "Dosya seçilmedi."
+    );
+  }
+
+
+  // ------------------------------------------------
+  // DOSYAYI BASE64'E ÇEVİR
+  // ------------------------------------------------
+
+  const base64 =
+    await fileToBase64(file);
+
+
+  // ------------------------------------------------
+  // GOOGLE APPS SCRIPT'E GÖNDER
+  // ------------------------------------------------
+
+  const result =
+    await apiPost({
+
+      action:
+        "uploadDocument",
+
+      personnel_id:
+        personnelId,
+
+      document_code:
+        documentCode,
+
+      file_name:
+        file.name,
+
+      mime_type:
+        file.type,
+
+      file_base64:
+        base64
+
+    });
+
+
+  if(!result || !result.success){
+
+    throw new Error(
+      result?.error ||
+      "Belge yüklenemedi."
+    );
+
+  }
+
+
+  return result;
+
+}
 }
 function renderForm(){
   document.getElementById("landing").classList.add("hidden");
