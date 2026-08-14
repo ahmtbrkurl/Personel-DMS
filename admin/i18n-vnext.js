@@ -64,7 +64,7 @@
     if (document.getElementById("stsI18nStyle")) return;
     const s=document.createElement("style");
     s.id="stsI18nStyle";
-    s.textContent=".sts-global-lang{display:flex;gap:4px}.sts-global-lang button{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:7px;padding:5px 8px;cursor:pointer;font-size:11px;font-weight:700}.sts-global-lang button.active{background:#2563eb;color:#fff;border-color:#2563eb}";
+    s.textContent=".sts-global-lang,.sts-login-lang{display:flex;gap:4px}.sts-global-lang button,.sts-login-lang button{border:1px solid #cbd5e1;background:#fff;color:#334155;border-radius:7px;padding:5px 8px;cursor:pointer;font-size:11px;font-weight:700}.sts-global-lang button.active,.sts-login-lang button.active{background:#2563eb;color:#fff;border-color:#2563eb}.sts-login-lang{justify-content:center;margin:12px 0 16px}";
     document.head.appendChild(s);
   }
 
@@ -118,7 +118,7 @@
     const set=document.querySelector("#settings");
     if(set){ text(set.querySelector(".panel-head p"),t.settings.desc); text(set.querySelector(".settings-box strong"),t.settings.status); text(set.querySelector(".settings-box .pill"),t.settings.warn); text(set.querySelector(".settings-box p"),t.settings.note); }
 
-    document.querySelectorAll(".sts-global-lang button").forEach(b=>b.classList.toggle("active",b.dataset.lang===lang));
+    document.querySelectorAll(".sts-global-lang button,.sts-login-lang button").forEach(b=>b.classList.toggle("active",b.dataset.lang===lang));
 
     // Keep the existing links-vnext language selector synchronized.
     const localLinksButton=document.querySelector(".vnext-lang button[data-l='"+lang+"']");
@@ -152,7 +152,7 @@
   }
 
   function bind(){
-    document.querySelectorAll(".sts-global-lang button").forEach(b=>{
+    document.querySelectorAll(".sts-global-lang button,.sts-login-lang button").forEach(b=>{
       b.onclick=()=>{
         lang=b.dataset.lang;
         localStorage.setItem(LANG_KEY,lang);
@@ -164,8 +164,10 @@
   installStyle();
   bind();
 
+  let translateTimer = null;
   const observer=new MutationObserver(()=>{
-    translateStatic();
+    clearTimeout(translateTimer);
+    translateTimer=setTimeout(translateStatic,30);
   });
   observer.observe(document.body,{childList:true,subtree:true});
 
