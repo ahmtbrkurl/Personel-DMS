@@ -59,22 +59,111 @@ const defaultLabels={
 document.querySelectorAll(".nav-item").forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 document.querySelectorAll("[data-goto]").forEach(b=>b.onclick=()=>showPage(b.dataset.goto));
 
+// ============================================================
+// STS HR SESSION
+// ============================================================
+
+const SESSION_KEY = "STS_HR_SESSION";
+const LANGUAGE_KEY = "STS_HR_LANGUAGE";
+
+function saveSession(username){
+  localStorage.setItem(
+    SESSION_KEY,
+    JSON.stringify({
+      loggedIn: true,
+      username: username,
+      createdAt: Date.now()
+    })
+  );
+}
+
+function getSession(){
+  try{
+    return JSON.parse(
+      localStorage.getItem(SESSION_KEY) || "null"
+    );
+  }catch(e){
+    return null;
+  }
+}
+
+function clearSession(){
+  localStorage.removeItem(SESSION_KEY);
+}
+
+function restoreSession(){
+
+  const session = getSession();
+
+  if(
+    session &&
+    session.loggedIn === true
+  ){
+
+    $("loginView").classList.add("hidden");
+    $("appView").classList.remove("hidden");
+
+    load();
+
+    return true;
+  }
+
+  return false;
+}
+
+
+// ============================================================
+// LOGIN
+// ============================================================
+
 $("loginBtn").onclick=()=>{
-  if(!$("username").value.trim()||!$("password").value){
-    $("loginMsg").textContent="Kullanıcı adı ve şifre girin.";
+
+  const username =
+    $("username").value.trim();
+
+  const password =
+    $("password").value;
+
+  if(!username || !password){
+
+    $("loginMsg").textContent =
+      "Kullanıcı adı ve şifre girin.";
+
     return;
   }
+
   $("loginMsg").textContent="";
+
+  // Oturumu kaydet
+  saveSession(username);
+
   $("loginView").classList.add("hidden");
   $("appView").classList.remove("hidden");
+
   load();
 };
 
+
+// ============================================================
+// LOGOUT
+// ============================================================
+
 $("logoutBtn").onclick=()=>{
+
+  clearSession();
+
   $("appView").classList.add("hidden");
   $("loginView").classList.remove("hidden");
+
   $("password").value="";
 };
+
+
+// ============================================================
+// SAYFA AÇILDIĞINDA OTURUMU GERİ YÜKLE
+// ============================================================
+
+restoreSession();
 
 async function load(){
   $("statGroups").textContent=demo.groups.length;
