@@ -1,6 +1,6 @@
 <!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>STS Personnel DMS — HR Panel</title><link rel="stylesheet" href="admin.css"></head><body>
   <link rel="stylesheet" href="links-vnext.css">
-<div id="loginView" class="login-wrap"><div class="login-card"><div class="logo">STS</div><h1>HR Yönetim Paneli</h1><p>Personel Belge Yönetim Sistemi</p><label>Kullanıcı Adı</label><input id="username" autocomplete="username" placeholder="HR kullanıcı adı"><label>Şifre</label><input id="password" type="password" autocomplete="current-password" placeholder="HR şifre"><button class="primary full" id="loginBtn">Giriş Yap</button><div id="loginMsg" class="message"></div><div class="demo-note">Kimlik doğrulaması sonraki aşamada Google Apps Script backend'e bağlanacaktır.</div></div></div>
+<div id="loginView" class="login-wrap"><div class="login-card"><div class="logo">STS</div><div id="loginLang" class="sts-login-lang" aria-label="Language"><button data-lang="tr" type="button">TR</button><button data-lang="ru" type="button">RU</button><button data-lang="en" type="button">EN</button></div><h1>HR Yönetim Paneli</h1><p>Personel Belge Yönetim Sistemi</p><label>Kullanıcı Adı</label><input id="username" autocomplete="username" placeholder="HR kullanıcı adı"><label>Şifre</label><input id="password" type="password" autocomplete="current-password" placeholder="HR şifre"><button class="primary full" id="loginBtn">Giriş Yap</button><div id="loginMsg" class="message"></div><div class="demo-note">Kimlik doğrulaması sonraki aşamada Google Apps Script backend'e bağlanacaktır.</div></div></div>
 <div id="appView" class="hidden"><aside class="sidebar"><div class="side-brand"><span>STS</span><div>Personnel DMS<small>HR Administration</small></div></div><nav>
 <button data-page="dashboard" class="nav-item active">📊 Dashboard</button><button data-page="groups" class="nav-item">👥 Gruplar</button><button data-page="forms" class="nav-item">🧩 Form Tasarımı</button><button data-page="links" class="nav-item">🔗 Başvuru Linkleri</button><button data-page="personnel" class="nav-item">📄 Personeller</button><button data-page="logs" class="nav-item">📋 İşlem Logları</button><button data-page="settings" class="nav-item">⚙️ Ayarlar</button></nav><button id="logoutBtn" class="logout">Çıkış</button></aside>
 <main class="main"><header class="header"><div><div class="eyebrow">HR ADMINISTRATION</div><h2 id="pageTitle">Dashboard</h2></div><div style="display:flex;align-items:center;gap:10px"><div id="globalLang" class="sts-global-lang"><button data-lang="tr" type="button">TR</button><button data-lang="ru" type="button">RU</button><button data-lang="en" type="button">EN</button></div><div class="user-chip">HR</div></div></header>
@@ -19,5 +19,5 @@
 </main></div>
 <script src="admin.js"></script>
 <script src="links-vnext.js"></script>
-
+<script src="i18n-vnext.js"></script>
 </body></html>
