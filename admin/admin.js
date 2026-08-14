@@ -165,6 +165,20 @@ $("logoutBtn").onclick=()=>{
 
 restoreSession();
 
+// Form Builder başlangıç durumunu güvenli şekilde hazırla.
+// Sayfa zaten yüklüyse doğrudan; değilse DOMContentLoaded sonrasında çalışır.
+function initFormBuilder(){
+  if($("formGroup") && $("fieldList") && $("propertiesBody")){
+    renderBuilder();
+  }
+}
+
+if(document.readyState === "loading"){
+  document.addEventListener("DOMContentLoaded", initFormBuilder, {once:true});
+}else{
+  initFormBuilder();
+}
+
 async function load(){
   $("statGroups").textContent=demo.groups.length;
   $("statPersonnel").textContent=0;
@@ -259,31 +273,64 @@ function populateGroups(){
     demo.groups.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join("");
 }
 
-document.querySelectorAll(".palette button").forEach(b=>{
-  b.onclick=()=>{
-    const type=b.dataset.type;
+// ============================================================
+// FORM BUILDER - ALAN EKLEME
+// Delegated event kullanıyoruz; böylece i18n veya başka bir
+// frontend scripti DOM'u yeniden oluştursa bile butonlar çalışır.
+// ============================================================
 
-    const f={
-      id:"FLD-"+Date.now()+Math.random().toString(16).slice(2),
-      type,
-      label:defaultLabels[type],
-      required:false,
-      helpText:"",
-      placeholder:"",
-      fileTypes:type==="document"?["PDF"]:type==="photo"?["JPG","JPEG","PNG"]:[],
-      maxMB:type==="document"||type==="photo"?10:null,
-      replaceAllowed:true,
-      hrApproval:false,
-      cameraAllowed:type==="photo",
-      galleryAllowed:type==="photo",
-      options:type==="select"?["Seçenek 1","Seçenek 2"]:[],
-      code:type==="document"||type==="photo"?type.toUpperCase():""
-    };
+document.addEventListener("click", function(e){
 
-    demo.fields.push(f);
-    selectedField=f.id;
-    renderBuilder();
+  const button = e.target.closest(".palette button[data-type]");
+
+  if(!button) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  const type = button.dataset.type;
+
+  if(!type || !defaultLabels[type]){
+    console.error("Geçersiz form alanı tipi:", type);
+    return;
+  }
+
+  const f = {
+    id:"FLD-"+Date.now()+"-"+Math.random().toString(16).slice(2),
+    type:type,
+    label:defaultLabels[type],
+    required:false,
+    helpText:"",
+    placeholder:"",
+    fileTypes:
+      type==="document"
+        ? ["PDF"]
+        : type==="photo"
+          ? ["JPG","JPEG","PNG"]
+          : [],
+    maxMB:
+      type==="document" || type==="photo"
+        ? 10
+        : null,
+    replaceAllowed:true,
+    hrApproval:false,
+    cameraAllowed:type==="photo",
+    galleryAllowed:type==="photo",
+    options:
+      type==="select"
+        ? ["Seçenek 1","Seçenek 2"]
+        : [],
+    code:
+      type==="document" || type==="photo"
+        ? type.toUpperCase()
+        : ""
   };
+
+  demo.fields.push(f);
+  selectedField=f.id;
+
+  renderBuilder();
+
 });
 
 function renderBuilder(){
@@ -485,9 +532,14 @@ function renderProperties(){
   };
 }
 
-$("formName").oninput=()=>{
-  $("canvasTitle").textContent=$("formName").value||"Personel Başvuru Formu";
-};
+if($("formName")){
+  $("formName").oninput=()=>{
+    if($("canvasTitle")){
+      $("canvasTitle").textContent =
+        $("formName").value || "Personel Başvuru Formu";
+    }
+  };
+}
 
 $("saveFormBtn").onclick=async()=>{
   const formName=String($("formName").value||"").trim();
