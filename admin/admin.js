@@ -1,4 +1,4 @@
-const API_URL=""; // Sonraki aşamada Google Apps Script Web App URL'si bağlanacak.
+const API_URL="https://script.google.com/macros/s/AKfycbwPMm6sjG_viMpjyW9zhNsGfDA9PKjckV47pvMplonGOqS-FNOnDxbl47EYF67Lmk4/exec";
 
 const demo={
   groups:[
@@ -13,6 +13,21 @@ const demo={
 let selectedField=null;
 
 const $=id=>document.getElementById(id);
+
+async function post(data){
+  if(!API_URL) throw new Error("Google Apps Script API URL tanımlı değil.");
+  const response=await fetch(API_URL,{
+    method:"POST",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify(data)
+  });
+  const text=await response.text();
+  let result;
+  try{ result=JSON.parse(text); }
+  catch(e){ throw new Error(text||"Backend geçerli JSON döndürmedi."); }
+  if(!result.success) throw new Error(result.error||"Backend işlemi başarısız.");
+  return result;
+}
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 
 const typeNames={
@@ -61,11 +76,27 @@ $("logoutBtn").onclick=()=>{
   $("password").value="";
 };
 
-function load(){
+async function load(){
   $("statGroups").textContent=demo.groups.length;
   $("statPersonnel").textContent=0;
   $("statPending").textContent=0;
   $("statChanges").textContent=0;
+
+  try{
+    const result=await post({action:"getApplicationLinkOptions"});
+    if(result.groups && result.groups.length){
+      demo.groups=result.groups.map(g=>({
+        id:g.id,
+        name:g.name,
+        description:"",
+        people:0,
+        docs:0
+      }));
+    }
+  }catch(error){
+    console.error("Backend grup okuma hatası:",error);
+  }
+
   renderGroups();
   populateGroups();
 }
@@ -369,16 +400,80 @@ $("formName").oninput=()=>{
   $("canvasTitle").textContent=$("formName").value||"Personel Başvuru Formu";
 };
 
-$("saveFormBtn").onclick=()=>{
+$("saveFormBtn").onclick=async()=>{
+  const formName=String($("formName").value||"").trim();
+  const groupId=String($("formGroup").value||"").trim();
+
+  if(!formName){
+    alert("Form adı zorunludur.");
+    $("formName").focus();
+    return;
+  }
+
+  if(!groupId){
+    alert("Personel grubu seçilmelidir.");
+    return;
+  }
+
   if(!demo.fields.length){
     alert("Önce en az bir alan ekleyin.");
     return;
   }
 
-  alert(
-    "Form tasarımı hazırlandı. " +
-    "Bir sonraki aşamada bu yapı Google Sheets + Apps Script backend'e kaydedilecek."
-  );
+  const fields=demo.fields.map((f,index)=>({
+    field_id:f.id,
+    type:f.type,
+    label:String(f.label||"").trim(),
+    code:String(f.code||"").trim().toUpperCase(),
+    required:f.required===true,
+    helpText:String(f.helpText||"").trim(),
+    placeholder:String(f.placeholder||"").trim(),
+    fileTypes:Array.isArray(f.fileTypes)?f.fileTypes:[],
+    maxMB:f.maxMB||null,
+    replaceAllowed:f.replaceAllowed!==false,
+    hrApproval:f.hrApproval===true,
+    cameraAllowed:f.cameraAllowed!==false,
+    galleryAllowed:f.galleryAllowed!==false,
+    options:Array.isArray(f.options)?f.options:[]
+  }));
+
+  const invalid=fields.some(f=>!f.label);
+  if(invalid){
+    alert("Tüm alanların etiketi doldurulmalıdır.");
+    return;
+  }
+
+  const button=$("saveFormBtn");
+  const originalText=button.textContent;
+  button.disabled=true;
+  button.textContent="Kaydediliyor...";
+
+  try{
+    const result=await post({
+      action:"createForm",
+      group_id:groupId,
+      form_name:formName,
+      version:"1.0",
+      created_by:"HR",
+      fields:fields
+    });
+
+    alert(
+      "Form başarıyla oluşturuldu.\\n\\n" +
+      "Form ID: " + result.form_id
+    );
+
+    demo.fields=[];
+    selectedField=null;
+    $("formName").value="";
+    renderBuilder();
+  }catch(error){
+    console.error(error);
+    alert("Form oluşturulamadı:\\n" + error.message);
+  }finally{
+    button.disabled=false;
+    button.textContent=originalText;
+  }
 };
 
 $("previewBtn").onclick=()=>{
