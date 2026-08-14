@@ -165,20 +165,6 @@ $("logoutBtn").onclick=()=>{
 
 restoreSession();
 
-// Form Builder başlangıç durumunu güvenli şekilde hazırla.
-// Sayfa zaten yüklüyse doğrudan; değilse DOMContentLoaded sonrasında çalışır.
-function initFormBuilder(){
-  if($("formGroup") && $("fieldList") && $("propertiesBody")){
-    renderBuilder();
-  }
-}
-
-if(document.readyState === "loading"){
-  document.addEventListener("DOMContentLoaded", initFormBuilder, {once:true});
-}else{
-  initFormBuilder();
-}
-
 async function load(){
   $("statGroups").textContent=demo.groups.length;
   $("statPersonnel").textContent=0;
@@ -274,28 +260,20 @@ function populateGroups(){
 }
 
 // ============================================================
-// FORM BUILDER - ALAN EKLEME
-// Delegated event kullanıyoruz; böylece i18n veya başka bir
-// frontend scripti DOM'u yeniden oluştursa bile butonlar çalışır.
+// FORM BUILDER - PALETTE
+// Event delegation kullanılır. Böylece Form Tasarımı sayfası
+// yeniden çizilse veya i18n scripti DOM'u güncellese bile
+// alan ekleme butonları çalışmaya devam eder.
 // ============================================================
 
-document.addEventListener("click", function(e){
-
-  const button = e.target.closest(".palette button[data-type]");
-
-  if(!button) return;
-
-  e.preventDefault();
-  e.stopPropagation();
-
-  const type = button.dataset.type;
+function addFormField(type){
 
   if(!type || !defaultLabels[type]){
     console.error("Geçersiz form alanı tipi:", type);
     return;
   }
 
-  const f = {
+  const f={
     id:"FLD-"+Date.now()+"-"+Math.random().toString(16).slice(2),
     type:type,
     label:defaultLabels[type],
@@ -330,7 +308,22 @@ document.addEventListener("click", function(e){
   selectedField=f.id;
 
   renderBuilder();
+}
 
+document.addEventListener("click",function(e){
+
+  const paletteButton=e.target.closest(
+    ".palette button[data-type]"
+  );
+
+  if(!paletteButton) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  addFormField(
+    paletteButton.getAttribute("data-type")
+  );
 });
 
 function renderBuilder(){
@@ -356,25 +349,47 @@ function renderBuilder(){
     </div>
   `).join("");
 
-  document.querySelectorAll(".field-row").forEach(r=>{
-    r.onclick=e=>{
-      if(e.target.dataset.remove)return;
-      selectedField=r.dataset.id;
-      renderBuilder();
-    };
-  });
-
-  document.querySelectorAll("[data-remove]").forEach(b=>{
-    b.onclick=e=>{
-      e.stopPropagation();
-      demo.fields=demo.fields.filter(f=>f.id!==b.dataset.remove);
-      selectedField=null;
-      renderBuilder();
-    };
-  });
-
   renderProperties();
 }
+
+// ============================================================
+// FORM BUILDER - FIELD SELECTION / REMOVE
+// ============================================================
+
+document.addEventListener("click",function(e){
+
+  const removeButton=e.target.closest(
+    "#fieldList [data-remove]"
+  );
+
+  if(removeButton){
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const id=removeButton.getAttribute("data-remove");
+
+    demo.fields=demo.fields.filter(
+      f=>f.id!==id
+    );
+
+    selectedField=null;
+    renderBuilder();
+
+    return;
+  }
+
+  const row=e.target.closest(
+    "#fieldList .field-row"
+  );
+
+  if(row){
+
+    selectedField=row.getAttribute("data-id");
+    renderBuilder();
+  }
+
+});
 
 function renderProperties(){
   const f=demo.fields.find(x=>x.id===selectedField);
@@ -501,7 +516,24 @@ function renderProperties(){
 
   $("propertiesBody").innerHTML=html;
 
-  $("propLabel").oninput=e=>f.label=e.target.value;
+  $("propLabel").oninput=e=>{
+    f.label=e.target.value;
+
+    const row=document.querySelector(
+      '#fieldList .field-row[data-id="'+CSS.escape(f.id)+'"]'
+    );
+
+    if(row){
+      const title=row.querySelector(".field-main strong");
+      if(title) title.textContent=f.label || defaultLabels[f.type];
+    }
+
+    if($("canvasTitle")){
+      $("canvasTitle").textContent =
+        $("formName").value || "Personel Başvuru Formu";
+    }
+  };
+
   $("propHelp").oninput=e=>f.helpText=e.target.value;
   $("propPlaceholder").oninput=e=>f.placeholder=e.target.value;
   $("propReq").onchange=e=>{
