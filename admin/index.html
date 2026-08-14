@@ -1,4 +1,6 @@
 <!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>STS Personnel DMS — HR Panel</title><link rel="stylesheet" href="admin.css"></head><body>
+  <link rel="stylesheet" href="links-vnext.css">
+
 <div id="loginView" class="login-wrap"><div class="login-card"><div class="logo">STS</div><h1>HR Yönetim Paneli</h1><p>Personel Belge Yönetim Sistemi</p><label>Kullanıcı Adı</label><input id="username" autocomplete="username" placeholder="HR kullanıcı adı"><label>Şifre</label><input id="password" type="password" autocomplete="current-password" placeholder="Şifre"><button class="primary full" id="loginBtn">Giriş Yap</button><div id="loginMsg" class="message"></div><div class="demo-note">Kimlik doğrulaması sonraki aşamada Google Apps Script backend'e bağlanacaktır.</div></div></div>
 <div id="appView" class="hidden"><aside class="sidebar"><div class="side-brand"><span>STS</span><div>Personnel DMS<small>HR Administration</small></div></div><nav>
 <button data-page="dashboard" class="nav-item active">📊 Dashboard</button><button data-page="groups" class="nav-item">👥 Gruplar</button><button data-page="forms" class="nav-item">🧩 Form Tasarımı</button><button data-page="links" class="nav-item">🔗 Başvuru Linkleri</button><button data-page="personnel" class="nav-item">📄 Personeller</button><button data-page="logs" class="nav-item">📋 İşlem Logları</button><button data-page="settings" class="nav-item">⚙️ Ayarlar</button></nav><button id="logoutBtn" class="logout">Çıkış</button></aside>
@@ -16,3 +18,4 @@
 <section id="logs" class="page hidden"><div class="panel"><div class="panel-head"><div><h3>İşlem Logları</h3><p>Belge yükleme, değiştirme ve onay hareketleri.</p></div></div><div id="logsTable"></div></div></section>
 <section id="settings" class="page hidden"><div class="panel"><div class="panel-head"><div><h3>Sistem Ayarları</h3><p>Backend bağlantısı ve genel sistem seçenekleri.</p></div></div><div class="settings-box"><strong>Backend durumu</strong><span class="pill warn"> Henüz bağlanmadı </span><p>Bir sonraki aşamada Google Apps Script Web App URL'si bağlanacak.</p></div></div></section>
 </main></div><script src="admin.js"></script></body></html>
+<script src="links-vnext.js"></script>
